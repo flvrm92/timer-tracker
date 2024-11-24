@@ -1,0 +1,21 @@
+{
+  "name": "time-tracker",
+  "version": "1.0.0",
+  "description": "time tracker electron app",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "set NODE_ENV=development&&electron ."
+  },
+  "author": "flvrm92",
+  "license": "ISC",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.5.0",
+    "electron": "^33.2.0",
+    "electron-reload": "^2.0.0-alpha.1",
+    "electron-reloader": "^1.2.3"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"    
+  }
+}

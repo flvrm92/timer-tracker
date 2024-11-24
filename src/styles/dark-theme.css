@@ -1,0 +1,171 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh; 
+  background-color: #121212;
+  color: #ffffff;
+}
+
+.container {
+  text-align: center;
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 10px;
+  width: 400px;    
+  background-color: #1e1e1e;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+
+.block {
+  background-color: #1e1e1e;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  padding: 20px;
+  border-radius: 10px;  
+}
+
+.timer-section {
+  text-align: center;
+}
+
+.project-section select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+}
+
+h1 {
+  margin: 0 0 20px;
+  font-size: 24px;
+}
+
+.timer-display {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #76c7c0;
+}
+
+.buttons button {
+  margin: 0 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  background-color: #333333;
+  color: white;
+}
+
+#start-btn {
+  background-color: #4caf50;
+  color: white;
+}
+
+#start-btn:hover {
+  background-color: #45a049;
+}
+
+#start-btn:hover {
+  background-color: #45a049;
+}
+
+#stop-btn:hover {
+  background-color: #e53935;
+}
+
+#stop-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+#theme-toggle-btn {
+  margin-top: 20px;
+  padding: 10px 20px;
+  background-color: #ffffff;
+  color: #444444;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#theme-toggle-btn:hover {
+  background-color: #f1eded;
+}
+
+header a {
+  color: #76c7c0;
+}
+
+header a:hover {
+  text-decoration: underline;
+}
+
+form input {
+  background-color: #333333;
+  color: white;
+  border: 1px solid #555555;
+}
+
+form button {
+  background-color: #444444;
+  color: white;
+}
+
+form button:hover {
+  background-color: #555555;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1e1e1e;
+}
+
+th, td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid #444;
+}
+
+th {
+  background-color: #333333;
+}
+
+tbody tr:nth-child(odd) {
+  background-color: #2e2e2e;
+}
+
+
+/* Select Dropdown Styling */
+.project-section {
+  margin-bottom: 20px;
+  background-color: #333;
+  color: #fff;
+}
+
+#project-dropdown {
+  width: 100%;
+  padding: 12px;
+  font-size: 1.1em;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #333;
+  box-sizing: border-box;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#project-dropdown:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
+}
