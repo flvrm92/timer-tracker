@@ -43,3 +43,6 @@ build/
 electron-builder.yaml
 *.bak
 *.orig
+
+# Database
+src/*.db
