@@ -2,7 +2,7 @@
   "name": "time-tracker",
   "version": "1.0.0",
   "description": "time tracker electron app",
-  "main": "src/index.js",
+  "main": "src/main/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "set NODE_ENV=development&&electron ."

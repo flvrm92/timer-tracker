@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+  <title>Timer Tracker</title>
+  <link rel="stylesheet" type="text/css" href="../../shared/styles/app.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="block">
+      <p>Current theme source: <strong id="theme-source">System</strong></p>
+
+      <button class="button-theme" id="toggle-dark-mode">
+        Toggle Dark Mode
+      </button>
+      <button class="button-theme" id="reset-to-system">
+        Reset to System Theme
+      </button>
+    </div>
+
+    <div class="block">
+      <h2>Select Project</h2>
+      <select id="project-dropdown" class="form-input project-dropdown">
+        <option value="" disabled selected>Select a project</option>
+      </select>
+      <input type="text" id="task-desc" placeholder="What are you working on?" required class="form-input" />
+    </div>
+
+    <div class="block">
+      <h1>Timer Tracker</h1>
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="buttons">
+        <button id="start-btn">Start</button>
+        <button id="stop-btn" disabled>Stop</button>
+      </div>
+    </div>
+  </div>
+  <script src="timer.js"></script>
+</body>
+
+</html>

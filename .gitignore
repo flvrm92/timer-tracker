@@ -45,4 +45,4 @@ electron-builder.yaml
 *.orig
 
 # Database
-src/*.db
+src/**/*.db

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Projects</title>
+  <link rel="stylesheet" type="text/css" href="../../shared/styles/app.css" />
+</head>
+
+<body>
+  <div class="container">
+    <div class="block">
+      <header>
+        <h1>Projects</h1>
+        <a href="../timer/timer.html">Back to Timer</a>
+      </header>
+
+      <section class="project-form">
+        <h2>Create New Project</h2>
+        <form id="project-form">
+          <input type="text" id="project-name" placeholder="Enter project name" required />
+          <button type="submit">Add Project</button>
+        </form>
+      </section>
+    </div>
+
+    <div class="block">
+      <section class="project-table">
+        <h2>Your Projects</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="projects-list"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <script src="projects.js"></script>
+</body>
+
+</html>

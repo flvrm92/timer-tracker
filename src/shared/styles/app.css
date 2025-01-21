@@ -5,12 +5,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;  
+  height: 100vh;    
 }
 
 .container {  
-  text-align: center;
-  background: #ffffff;
+  text-align: center;  
   padding: 20px;
   border-radius: 10px;
   width: 400px;
@@ -18,10 +17,10 @@ body {
 }
 
 .block {
-  background-color: #f9f9f9;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  margin-bottom: 10px;
 }
 
 .timer-section {
@@ -82,18 +81,17 @@ h1 {
   cursor: not-allowed;
 }
 
-#theme-toggle-btn {
-  margin-top: 20px;
+.button-theme {
   padding: 10px 20px;
-  background-color: #444444;
+  background-color: #555;
   color: #ffffff;
   border: none;
   border-radius: 5px;
   cursor: pointer;
 }
 
-#theme-toggle-btn:hover {
-  background-color: #555555;
+.button-theme:hover {
+  background-color: #868585;
 }
 
 header {
@@ -157,12 +155,7 @@ tbody tr:nth-child(odd) {
   background-color: #f9f9f9;
 }
 
-/* Select Dropdown Styling */
-.project-section {
-  margin-bottom: 20px;
-}
-
-#project-dropdown {
+.form-input {
   width: 100%;
   padding: 12px;
   font-size: 1.1em;
@@ -171,20 +164,60 @@ tbody tr:nth-child(odd) {
   background-color: #fff;
   color: #333;
   box-sizing: border-box;
+  margin-bottom: 1rem;
+}
+
+.project-dropdown {  
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-#project-dropdown:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 10px rgba(0, 123, 255, 0.3);
-}
-
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
 }
 
-@media (prefers-color-schema: dark) {
-  body { background-color: #121212; color: #ffffff;  }
+@media (prefers-color-scheme: dark) {
+  .container {
+    background: #ffffff;
+    background-color: #1e1e1e;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  }
+  
+  .block {
+    background-color: #333;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);    
+    color: #fff;
+  }
+
+  .project-section select {
+    border: 1px solid #ccc;
+  }
+
+  table {
+    background-color: #1e1e1e;
+  }
+
+  th, td {
+    border: 1px solid #444;
+  }
+
+  th {
+    background-color: #333333;
+  }
+
+  tbody tr:nth-child(odd) {
+    background-color: #2e2e2e;
+  }
+
+  body { 
+    background-color: #121212; 
+    color: #ffffff;  
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  body {
+    background-color: #ffffff; 
+    color: #121212;    
+  }
 }

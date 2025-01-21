@@ -30,13 +30,13 @@ projectForm.addEventListener('submit', (e) => {
 
 function deleteProject(id) {
   if (id) {
-    window.ipcRenderer.send('delete-project', id);    
+    window.ipcRenderer.send('delete-project', id);
   }
 }
 
 window.ipcRenderer.on('project-deleted', () => {
   loadProjects();
-})
+});
 
 window.ipcRenderer.on('projects', (projects) => {
   populateProjects(projects);

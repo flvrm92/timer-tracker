@@ -25,6 +25,7 @@ db.run(
     start_time TEXT,
     end_time TEXT,
     duration INTEGER,
+    task_description TEXT NULLABLE,
     FOREIGN KEY (project_id) REFERENCES projects(id)
   )`,
   (err) => {
@@ -34,9 +35,9 @@ db.run(
   }
 );
 
-function insertTimer(projectId, startTime, endTime, duration) {
-  const query = `INSERT INTO timers (project_id, start_time, end_time, duration) VALUES (?, ?, ?, ?)`;
-  db.run(query, [projectId, startTime, endTime, duration], function (err) {
+function insertTimer(projectId, startTime, endTime, duration, taskDesc) {
+  const query = `INSERT INTO timers (project_id, start_time, end_time, duration, task_description) VALUES (?, ?, ?, ?, ?)`;
+  db.run(query, [projectId, startTime, endTime, duration, taskDesc], function (err) {
     if (err) {
       console.error('Error inserting timer:', err.message);
     } else {
