@@ -28,6 +28,13 @@ const createWindow = () => {
       }]
     },
     {
+      label: 'Timers',
+      submenu: [{
+        label: 'List & Edit',
+        click: () => win.loadFile('src/renderer/timers/timers.html')
+      }]
+    },
+    {
       label: 'Toggle DevTools',
       accelerator: 'Ctrl+Shift+I',
       click: () => {

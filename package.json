@@ -4,18 +4,21 @@
   "description": "time tracker electron app",
   "main": "src/main/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest --runInBand",
+    "test:watch": "jest --watchAll",
     "start": "set NODE_ENV=development&&electron ."
   },
   "author": "flvrm92",
   "license": "ISC",
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
+    "@types/jest": "^29.5.12",
     "electron": "^33.2.0",
     "electron-reload": "^2.0.0-alpha.1",
-    "electron-reloader": "^1.2.3"
+    "electron-reloader": "^1.2.3",
+    "jest": "^29.7.0"
   },
   "dependencies": {
-    "sqlite3": "^5.1.7"    
+    "sqlite3": "^5.1.7"
   }
 }

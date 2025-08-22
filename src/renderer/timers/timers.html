@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Timers</title>
+  <link rel="stylesheet" type="text/css" href="../../shared/styles/app.css" />
+  <style>
+    .timers-container {
+      max-width: 1100px;
+    }
+
+    table {
+      font-size: 0.9rem;
+    }
+
+    td input[type=datetime-local] {
+      width: 210px;
+    }
+
+    .duration-cell {
+      font-family: monospace;
+    }
+
+    .error {
+      color: #f44336;
+      font-size: 0.75rem;
+    }
+
+    .row-invalid {
+      background: #ffe0e0 !important;
+    }
+
+    .actions button {
+      margin-right: 4px;
+    }
+
+    .pagination {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .pagination button:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      gap: 16px;
+    }
+
+    .filter-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-section label {
+      font-weight: 500;
+    }
+
+    .filter-section select {
+      padding: 6px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: white;
+    }
+
+    .export-section {
+      display: flex;
+      align-items: center;
+    }
+
+    .export-btn {
+      background: #2196F3;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .export-btn:hover {
+      background: #1976D2;
+    }
+
+    .export-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+
+    .status-message {
+      margin-top: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .status-message.success {
+      background: #e8f5e8;
+      color: #2e7d32;
+      border: 1px solid #c8e6c9;
+    }
+
+    .status-message.error {
+      background: #ffebee;
+      color: #c62828;
+      border: 1px solid #ffcdd2;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container timers-container">
+    <div class="block">
+      <header>
+        <h1>Timers</h1>
+        <a href="../timer/timer.html">Back to Timer</a>
+      </header>
+
+      <div class="controls">
+        <div class="filter-section">
+          <label for="project-filter">Filter by Project:</label>
+          <select id="project-filter">
+            <option value="">All Projects</option>
+          </select>
+        </div>
+        <div class="export-section">
+          <button id="export-btn" class="export-btn">Export CSV</button>
+        </div>
+      </div>
+
+      <div id="status-message" class="status-message"></div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Project</th>
+            <th>Task</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Duration</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="timers-body"></tbody>
+      </table>
+      <div class="pagination">
+        <button id="prev-page">Prev</button>
+        <span id="page-indicator"></span>
+        <button id="next-page">Next</button>
+      </div>
+    </div>
+  </div>
+  <script src="timers.js"></script>
+</body>
+
+</html>

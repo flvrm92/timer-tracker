@@ -5,14 +5,14 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 100vh;    
+  height: 100vh;
 }
 
-.container {  
-  text-align: center;  
+.container {
+  text-align: center;
   padding: 20px;
   border-radius: 10px;
-  width: 400px;
+  min-width: 400px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
 }
 
@@ -112,7 +112,7 @@ header a:hover {
 
 .project-form,
 .project-table {
-  margin-bottom: 20px;  
+  margin-bottom: 20px;
 }
 
 form input {
@@ -141,7 +141,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 10px;
   text-align: left;
   border: 1px solid #ddd;
@@ -167,7 +168,7 @@ tbody tr:nth-child(odd) {
   margin-bottom: 1rem;
 }
 
-.project-dropdown {  
+.project-dropdown {
   cursor: pointer;
   transition: all 0.3s ease;
 }
@@ -182,10 +183,10 @@ tbody tr:nth-child(odd) {
     background-color: #1e1e1e;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
   }
-  
+
   .block {
     background-color: #333;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);    
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     color: #fff;
   }
 
@@ -197,7 +198,8 @@ tbody tr:nth-child(odd) {
     background-color: #1e1e1e;
   }
 
-  th, td {
+  th,
+  td {
     border: 1px solid #444;
   }
 
@@ -209,15 +211,15 @@ tbody tr:nth-child(odd) {
     background-color: #2e2e2e;
   }
 
-  body { 
-    background-color: #121212; 
-    color: #ffffff;  
+  body {
+    background-color: #121212;
+    color: #ffffff;
   }
 }
 
 @media (prefers-color-scheme: light) {
   body {
-    background-color: #ffffff; 
-    color: #121212;    
+    background-color: #ffffff;
+    color: #121212;
   }
 }
