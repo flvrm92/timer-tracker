@@ -45,4 +45,8 @@ electron-builder.yaml
 *.orig
 
 # Database
-src/**/*.db
+/**/*.db
+
+pbis/**/*
+
+coverage/**/*
