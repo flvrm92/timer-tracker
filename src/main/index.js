@@ -7,8 +7,8 @@ const env = process.env.NODE_ENV || 'development';
 
 const createWindow = () => {
   const win = new BrowserWindow({
-    width: 1000,
-    height: 800,
+    width: 1700,
+    height: 900,
     webPreferences: {
       preload: path.join(__dirname, '../settings/preload.js'),
       devTools: env === 'development',
@@ -35,11 +35,74 @@ const createWindow = () => {
       }]
     },
     {
-      label: 'Toggle DevTools',
-      accelerator: 'Ctrl+Shift+I',
-      click: () => {
-        win.webContents.toggleDevTools()
-      }
+      label: 'View',
+      submenu: [
+        {
+          label: 'Theme',
+          submenu: [
+            {
+              label: 'Light',
+              type: 'radio',
+              click: async () => {
+                await win.webContents.executeJavaScript(`
+                  if (window.darkMode) {
+                    window.darkMode.setTheme('light');
+                  }
+                  if (window.ThemeUtils) {
+                    window.ThemeUtils.setTheme('light');
+                  }
+                `);
+              }
+            },
+            {
+              label: 'Dark',
+              type: 'radio',
+              click: async () => {
+                await win.webContents.executeJavaScript(`
+                  if (window.darkMode) {
+                    window.darkMode.setTheme('dark');
+                  }
+                  if (window.ThemeUtils) {
+                    window.ThemeUtils.setTheme('dark');
+                  }
+                `);
+              }
+            },
+            {
+              label: 'System',
+              type: 'radio',
+              checked: true,
+              click: async () => {
+                await win.webContents.executeJavaScript(`
+                  if (window.darkMode) {
+                    window.darkMode.system();
+                  }
+                  if (window.ThemeUtils) {
+                    window.ThemeUtils.setTheme('system');
+                  }
+                `);
+              }
+            }
+          ]
+        },
+        { type: 'separator' },
+        {
+          label: 'Toggle DevTools',
+          accelerator: 'Ctrl+Shift+I',
+          click: () => {
+            win.webContents.toggleDevTools()
+          }
+        }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        {
+          label: 'Timer',
+          click: () => win.loadFile('src/renderer/timer/timer.html')
+        }
+      ]
     },
     {
       label: 'Exit',

@@ -31,14 +31,21 @@ function setupIpcHandlers() {
     insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc);
   });
 
-  ipcMain.on('get-timers', (event, { page, projectId } = { page: 1 }) => {
+  ipcMain.on('get-timers', (event, { page, projectId, startDate, endDate } = { page: 1 }) => {
     const pageSize = 15;
     const currentPage = page && page > 0 ? page : 1;
     const filterProjectId = projectId && projectId !== '' ? projectId : null;
+    const filterStartDate = startDate && startDate !== '' ? startDate : null;
+    const filterEndDate = endDate && endDate !== '' ? endDate : null;
 
-    countTimers(filterProjectId, (err, total) => {
+    // Validate date range
+    if (filterStartDate && filterEndDate && filterStartDate > filterEndDate) {
+      return event.sender.send('timers-error', 'Start date must be before or equal to end date');
+    }
+
+    countTimers(filterProjectId, filterStartDate, filterEndDate, (err, total) => {
       if (err) return event.sender.send('timers-error', err.message);
-      getTimers(currentPage, pageSize, filterProjectId, (err2, rows) => {
+      getTimers(currentPage, pageSize, filterProjectId, filterStartDate, filterEndDate, (err2, rows) => {
         if (err2) return event.sender.send('timers-error', err2.message);
         const totalPages = Math.ceil(total / pageSize) || 1;
         event.sender.send('timers', { rows, page: currentPage, pageSize, total, totalPages });
@@ -64,9 +71,16 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.on('export-csv', async (event, { projectId } = {}) => {
+  ipcMain.on('export-csv', async (event, { projectId, startDate, endDate } = {}) => {
     try {
       const filterProjectId = projectId && projectId !== '' ? projectId : null;
+      const filterStartDate = startDate && startDate !== '' ? startDate : null;
+      const filterEndDate = endDate && endDate !== '' ? endDate : null;
+
+      // Validate date range
+      if (filterStartDate && filterEndDate && filterStartDate > filterEndDate) {
+        return event.sender.send('csv-export-error', 'Start date must be before or equal to end date');
+      }
 
       // Get project name for filename if filtering by project
       let projectName = null;
@@ -83,7 +97,7 @@ function setupIpcHandlers() {
 
       // Get timers data
       const timers = await new Promise((resolve, reject) => {
-        getTimersForExport(filterProjectId, (err, rows) => {
+        getTimersForExport(filterProjectId, filterStartDate, filterEndDate, (err, rows) => {
           if (err) reject(err);
           else resolve(rows);
         });
@@ -114,8 +128,6 @@ function setupIpcHandlers() {
     }
   });
 
-
-  // theme
   ipcMain.handle('dark-mode:toggle', () => {
     if (nativeTheme.shouldUseDarkColors) nativeTheme.themeSource = 'light';
     else nativeTheme.themeSource = 'dark';
@@ -124,6 +136,25 @@ function setupIpcHandlers() {
 
   ipcMain.handle('dark-mode:system', () => {
     nativeTheme.themeSource = 'system';
+    return nativeTheme.themeSource;
+  });
+
+  ipcMain.handle('dark-mode:set', (event, theme) => {
+    if (['light', 'dark', 'system'].includes(theme)) {
+      nativeTheme.themeSource = theme;
+      return {
+        themeSource: nativeTheme.themeSource,
+        shouldUseDarkColors: nativeTheme.shouldUseDarkColors
+      };
+    }
+    throw new Error(`Invalid theme: ${theme}`);
+  });
+
+  ipcMain.handle('dark-mode:get', () => {
+    return {
+      themeSource: nativeTheme.themeSource,
+      shouldUseDarkColors: nativeTheme.shouldUseDarkColors
+    };
   });
 }
 

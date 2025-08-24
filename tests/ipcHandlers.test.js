@@ -40,8 +40,8 @@ describe('IPC Handlers', () => {
   });
 
   test('get-timers sends timers payload', () => {
-    db.countTimers.mockImplementation((projectId, cb) => cb(null, 1));
-    db.getTimers.mockImplementation((page, size, projectId, cb) => cb(null, [{ id: 1, project_name: 'P', duration: 5 }]));
+    db.countTimers.mockImplementation((projectId, startDate, endDate, cb) => cb(null, 1));
+    db.getTimers.mockImplementation((page, size, projectId, startDate, endDate, cb) => cb(null, [{ id: 1, project_name: 'P', duration: 5 }]));
     const event = createMockEvent();
     ipcMain.handlers['get-timers'](event, { page: 1 });
     const sent = event.sender.sent.find(m => m.channel === 'timers');
@@ -50,7 +50,7 @@ describe('IPC Handlers', () => {
   });
 
   test('get-timers error path', () => {
-    db.countTimers.mockImplementation((projectId, cb) => cb(new Error('fail')));
+    db.countTimers.mockImplementation((projectId, startDate, endDate, cb) => cb(new Error('fail')));
     const event = createMockEvent();
     ipcMain.handlers['get-timers'](event, { page: 1 });
     const errMsg = event.sender.sent.find(m => m.channel === 'timers-error');

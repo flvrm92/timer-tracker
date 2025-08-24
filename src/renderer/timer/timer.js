@@ -6,17 +6,14 @@ let selectedProjectId = null;
 const timerDisplay = document.getElementById('timer-display');
 const startBtn = document.getElementById('start-btn');
 const stopBtn = document.getElementById('stop-btn');
-
 const projectDropdown = document.getElementById('project-dropdown');
 
-document.getElementById('toggle-dark-mode').addEventListener('click', async () => {
-  const isDarkMode = await window.darkMode.toggle()
-  document.getElementById('theme-source').innerHTML = isDarkMode ? 'Dark' : 'Light'
-});
-
-document.getElementById('reset-to-system').addEventListener('click', async () => {
-  await window.darkMode.system()
-  document.getElementById('theme-source').innerHTML = 'System'
+// Initialize theme management
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.ThemeUtils) {
+    const themeManager = window.ThemeUtils.getThemeManager();
+    // Theme is automatically applied by the theme manager
+  }
 });
 
 projectDropdown.addEventListener('change', () => {
@@ -32,8 +29,15 @@ function formatTime(seconds) {
 }
 
 function startTimer() {
+  if (!selectedProjectId) {
+    alert('Please select a project before starting the timer.');
+    return;
+  }
+
   startBtn.disabled = true;
   stopBtn.disabled = false;
+
+  startBtn.innerHTML = '<span class="spinner"></span> Running...';
 
   startTime = new Date().toISOString();
   const startMilliseconds = Date.now() - elapsedTime * 1000;
@@ -51,21 +55,30 @@ function makeReadonly() {
 }
 
 function stopTimer() {
+  const taskDesc = document.getElementById('task-desc').value.trim();
   startBtn.disabled = false;
   stopBtn.disabled = true;
+
+  startBtn.innerHTML = '<span>Start Timer</span>';
 
   clearInterval(timerInterval);
 
   const endTime = new Date().toISOString();
   const duration = elapsedTime; // in seconds
 
-  const taskDesc = document.getElementById('task-desc').value;
-
   window.ipcRenderer.send('save-timer', { selectedProjectId, startTime, endTime, duration, taskDesc });
 
   console.log(`Timer stopped. Duration: ${formatTime(duration)}`);
+
+  // Reset form
   elapsedTime = 0;
   timerDisplay.textContent = '00:00:00';
+  document.getElementById('task-desc').value = '';
+  document.getElementById('task-desc').disabled = false;
+  document.getElementById('project-dropdown').disabled = false;
+
+  // Show success feedback
+  showSuccessMessage(`Timer saved! Duration: ${formatTime(duration)}`);
 }
 
 function populateProjectDropdown(projects) {
@@ -82,11 +95,33 @@ function loadProjects() {
   window.ipcRenderer.send('get-projects');
 }
 
+function showSuccessMessage(message) {
+  // Create a temporary success message
+  const messageEl = document.createElement('div');
+  messageEl.className = 'alert alert-success';
+  messageEl.textContent = message;
+  messageEl.style.position = 'fixed';
+  messageEl.style.top = '20px';
+  messageEl.style.right = '20px';
+  messageEl.style.zIndex = '1000';
+  messageEl.style.maxWidth = '300px';
+
+  document.body.appendChild(messageEl);
+
+  setTimeout(() => {
+    if (messageEl.parentNode) {
+      messageEl.parentNode.removeChild(messageEl);
+    }
+  }, 5000);
+}
+
+// Event listeners
 window.ipcRenderer.on('projects', (projects) => {
   populateProjectDropdown(projects);
 });
 
-loadProjects();
-
 startBtn.addEventListener('click', startTimer);
 stopBtn.addEventListener('click', stopTimer);
+
+// Initialize
+loadProjects();

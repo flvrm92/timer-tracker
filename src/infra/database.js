@@ -76,16 +76,27 @@ function insertTimer(projectId, startTime, endTime, duration, taskDesc, callback
   });
 }
 
-function getTimers(page, pageSize, projectId = null, callback) {
+function getTimers(page, pageSize, projectId = null, startDate = null, endDate = null, callback) {
   const offset = (page - 1) * pageSize;
   let query = `SELECT t.id, t.project_id, p.name AS project_name, t.task_description, t.start_time, t.end_time, t.duration
                FROM timers t
-               LEFT JOIN projects p ON p.id = t.project_id`;
+               LEFT JOIN projects p ON p.id = t.project_id
+               WHERE 1=1`;
   let params = [];
 
   if (projectId) {
-    query += ` WHERE t.project_id = ?`;
+    query += ` AND t.project_id = ?`;
     params.push(projectId);
+  }
+
+  if (startDate) {
+    query += ` AND DATE(t.start_time) >= ?`;
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    query += ` AND DATE(t.start_time) <= ?`;
+    params.push(endDate);
   }
 
   query += ` ORDER BY t.start_time DESC LIMIT ? OFFSET ?`;
@@ -97,13 +108,23 @@ function getTimers(page, pageSize, projectId = null, callback) {
   });
 }
 
-function countTimers(projectId = null, callback) {
-  let query = 'SELECT COUNT(*) AS count FROM timers';
+function countTimers(projectId = null, startDate = null, endDate = null, callback) {
+  let query = 'SELECT COUNT(*) AS count FROM timers WHERE 1=1';
   let params = [];
 
   if (projectId) {
-    query += ' WHERE project_id = ?';
+    query += ' AND project_id = ?';
     params.push(projectId);
+  }
+
+  if (startDate) {
+    query += ' AND DATE(start_time) >= ?';
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    query += ' AND DATE(start_time) <= ?';
+    params.push(endDate);
   }
 
   db.get(query, params, (err, row) => {
@@ -112,15 +133,26 @@ function countTimers(projectId = null, callback) {
   });
 }
 
-function getTimersForExport(projectId = null, callback) {
+function getTimersForExport(projectId = null, startDate = null, endDate = null, callback) {
   let query = `SELECT t.id, t.project_id, p.name AS project_name, t.task_description, t.start_time, t.end_time, t.duration
                FROM timers t
-               LEFT JOIN projects p ON p.id = t.project_id`;
+               LEFT JOIN projects p ON p.id = t.project_id
+               WHERE 1=1`;
   let params = [];
 
   if (projectId) {
-    query += ` WHERE t.project_id = ?`;
+    query += ` AND t.project_id = ?`;
     params.push(projectId);
+  }
+
+  if (startDate) {
+    query += ` AND DATE(t.start_time) >= ?`;
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    query += ` AND DATE(t.start_time) <= ?`;
+    params.push(endDate);
   }
 
   query += ` ORDER BY t.start_time DESC`;

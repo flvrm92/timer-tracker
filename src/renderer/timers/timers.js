@@ -3,11 +3,27 @@ const prevBtn = document.getElementById('prev-page');
 const nextBtn = document.getElementById('next-page');
 const pageIndicator = document.getElementById('page-indicator');
 const projectFilter = document.getElementById('project-filter');
+const monthFilter = document.getElementById('month-filter');
+const startDateInput = document.getElementById('start-date');
+const endDateInput = document.getElementById('end-date');
+const customDateSection = document.getElementById('custom-date-section') || document.querySelector('.custom-date-section');
 const exportBtn = document.getElementById('export-btn');
 const statusMessage = document.getElementById('status-message');
+
 let currentPage = 1;
 let totalPages = 1;
 let selectedProjectId = '';
+let selectedStartDate = '';
+let selectedEndDate = '';
+let selectedMonthFilter = 'all-time';
+
+// Initialize theme and icon utilities
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.ThemeUtils) {
+    const themeManager = window.ThemeUtils.getThemeManager();
+    // Theme is automatically applied
+  }
+});
 
 function formatDuration(sec) {
   const s = Number(sec) || 0;
@@ -33,12 +49,79 @@ function localInputToIso(val) {
   return d.toISOString();
 }
 
+function getMonthDateRange(monthFilter) {
+  const now = new Date();
+
+  if (monthFilter === 'this-month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    };
+  }
+
+  if (monthFilter === 'last-month') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0);
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    };
+  }
+
+  return { start: '', end: '' };
+}
+
 function computeDuration(startIso, endIso) {
   if (!startIso || !endIso) return 0;
   const s = new Date(startIso).getTime();
   const e = new Date(endIso).getTime();
   if (isNaN(s) || isNaN(e) || e < s) return 0;
   return Math.floor((e - s) / 1000);
+}
+
+function createActionButtons() {
+  if (!window.IconUtils) {
+    return `
+      <button class="btn btn-sm btn-success save-btn" disabled title="Save Changes">Save</button>
+      <button class="btn btn-sm btn-secondary cancel-btn" disabled title="Cancel Changes">Cancel</button>
+      <button class="btn btn-sm btn-danger delete-btn" title="Delete Timer">Delete</button>
+    `;
+  }
+
+  const saveIcon = window.IconUtils.createIcon('save', {
+    size: 'sm',
+    title: 'Save Changes',
+    ariaLabel: 'Save Changes'
+  });
+
+  const cancelIcon = window.IconUtils.createIcon('cancel', {
+    size: 'sm',
+    title: 'Cancel Changes',
+    ariaLabel: 'Cancel Changes'
+  });
+
+  const deleteIcon = window.IconUtils.createIcon('delete', {
+    size: 'sm',
+    title: 'Delete Timer',
+    ariaLabel: 'Delete Timer'
+  });
+
+  return `
+    <button class="btn btn-sm btn-success btn-icon save-btn tooltip" disabled title="Save Changes" aria-label="Save Changes">
+      ${saveIcon}
+      <span class="tooltip-text">Save Changes</span>
+    </button>
+    <button class="btn btn-sm btn-secondary btn-icon cancel-btn tooltip" disabled title="Cancel Changes" aria-label="Cancel Changes">
+      ${cancelIcon}
+      <span class="tooltip-text">Cancel Changes</span>
+    </button>
+    <button class="btn btn-sm btn-danger btn-icon delete-btn tooltip" title="Delete Timer" aria-label="Delete Timer">
+      ${deleteIcon}
+      <span class="tooltip-text">Delete Timer</span>
+    </button>
+  `;
 }
 
 function renderRows(rows) {
@@ -54,13 +137,11 @@ function renderRows(rows) {
       <td>${row.id}</td>
       <td>${row.project_name || ''}</td>
       <td>${row.task_description || ''}</td>
-      <td><input type="datetime-local" class="start-input" value="${startLocal}"></td>
-      <td><input type="datetime-local" class="end-input" value="${endLocal}"></td>
+      <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
+      <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
       <td class="duration-cell">${formatDuration(row.duration)}</td>
-      <td class="actions">
-        <button class="save-btn" disabled>Save</button>
-        <button class="cancel-btn" disabled>Cancel</button>
-        <button class="delete-btn">Delete</button>
+      <td>
+        ${createActionButtons()}
         <div class="error" style="display:none"></div>
       </td>
     `;
@@ -158,15 +239,68 @@ projectFilter.addEventListener('change', (e) => {
   fetchPage();
 });
 
+// Month filter change handler
+monthFilter.addEventListener('change', (e) => {
+  selectedMonthFilter = e.target.value;
+
+  if (selectedMonthFilter === 'custom') {
+    customDateSection.style.display = 'flex';
+    // Don't fetch immediately for custom - wait for date inputs
+  } else {
+    customDateSection.style.display = 'none';
+
+    if (selectedMonthFilter === 'all-time') {
+      selectedStartDate = '';
+      selectedEndDate = '';
+    } else {
+      const dateRange = getMonthDateRange(selectedMonthFilter);
+      selectedStartDate = dateRange.start;
+      selectedEndDate = dateRange.end;
+    }
+
+    currentPage = 1;
+    fetchPage();
+  }
+});
+
+// Date input change handlers
+function handleDateChange() {
+  if (selectedMonthFilter === 'custom') {
+    selectedStartDate = startDateInput.value;
+    selectedEndDate = endDateInput.value;
+
+    // Validate date range
+    if (selectedStartDate && selectedEndDate && selectedStartDate > selectedEndDate) {
+      showStatusMessage('Start date must be before or equal to end date', 'error');
+      return;
+    }
+
+    currentPage = 1;
+    fetchPage();
+  }
+}
+
+startDateInput.addEventListener('change', handleDateChange);
+endDateInput.addEventListener('change', handleDateChange);
+
 // Export button handler
 exportBtn.addEventListener('click', () => {
   exportBtn.disabled = true;
   exportBtn.textContent = 'Exporting...';
-  window.ipcRenderer.send('export-csv', { projectId: selectedProjectId });
+  window.ipcRenderer.send('export-csv', {
+    projectId: selectedProjectId,
+    startDate: selectedStartDate,
+    endDate: selectedEndDate
+  });
 });
 
 function fetchPage() {
-  window.ipcRenderer.send('get-timers', { page: currentPage, projectId: selectedProjectId });
+  window.ipcRenderer.send('get-timers', {
+    page: currentPage,
+    projectId: selectedProjectId,
+    startDate: selectedStartDate,
+    endDate: selectedEndDate
+  });
 }
 
 function showStatusMessage(message, type = 'success') {
@@ -242,28 +376,30 @@ window.ipcRenderer.on('timer-update-error', ({ id, message }) => {
 window.ipcRenderer.on('timer-updated', (row) => {
   const tr = bodyEl.querySelector(`tr[data-id='${row.id}']`);
   if (!tr) return fetchPage();
-  tr.outerHTML = (() => {
-    const startLocal = isoToLocalInput(row.start_time);
-    const endLocal = isoToLocalInput(row.end_time);
-    return `<tr data-id='${row.id}'>
-      <td>${row.id}</td>
-      <td>${row.project_name || ''}</td>
-      <td>${row.task_description || ''}</td>
-      <td><input type="datetime-local" class="start-input" value="${startLocal}"></td>
-      <td><input type="datetime-local" class="end-input" value="${endLocal}"></td>
-      <td class="duration-cell">${formatDuration(row.duration)}</td>
-      <td class="actions">
-        <button class="save-btn" disabled>Save</button>
-        <button class="cancel-btn" disabled>Cancel</button>
-        <div class="error" style="display:none"></div>
-      </td>
-    </tr>`;
-  })();
+
+  const startLocal = isoToLocalInput(row.start_time);
+  const endLocal = isoToLocalInput(row.end_time);
+
+  tr.innerHTML = `
+    <td>${row.id}</td>
+    <td>${row.project_name || ''}</td>
+    <td>${row.task_description || ''}</td>
+    <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
+    <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
+    <td class="duration-cell">${formatDuration(row.duration)}</td>
+    <td class="actions">
+      ${createActionButtons()}
+      <div class="error" style="display:none"></div>
+    </td>
+  `;
 });
 
 window.ipcRenderer.on('timer-deleted', ({ id }) => {
   const tr = bodyEl.querySelector(`tr[data-id='${id}']`);
-  if (tr) tr.remove();
+  if (tr) {
+    tr.remove();
+    showStatusMessage('Timer deleted successfully', 'success');
+  }
 });
 
 // Initialize

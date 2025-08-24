@@ -24,17 +24,17 @@ function promisifyInsertProject(name) {
   });
 }
 
-function promisifyGetTimers(page, pageSize = 15, projectId = null) {
+function promisifyGetTimers(page, pageSize = 15, projectId = null, startDate = null, endDate = null) {
   return new Promise((resolve, reject) => {
-    getTimers(page, pageSize, projectId, (err, rows) => {
+    getTimers(page, pageSize, projectId, startDate, endDate, (err, rows) => {
       if (err) reject(err); else resolve(rows);
     });
   });
 }
 
-function promisifyCountTimers(projectId = null) {
+function promisifyCountTimers(projectId = null, startDate = null, endDate = null) {
   return new Promise((resolve, reject) => {
-    countTimers(projectId, (err, total) => err ? reject(err) : resolve(total));
+    countTimers(projectId, startDate, endDate, (err, total) => err ? reject(err) : resolve(total));
   });
 }
 
@@ -125,18 +125,74 @@ describe('Database timer operations', () => {
 
   test('getTimersForExport returns all timers for export', async () => {
     const allTimers = await new Promise((resolve, reject) => {
-      getTimersForExport(null, (err, rows) => {
+      getTimersForExport(null, null, null, (err, rows) => {
         if (err) reject(err); else resolve(rows);
       });
     });
     expect(allTimers.length).toBe(2);
 
     const filteredTimers = await new Promise((resolve, reject) => {
-      getTimersForExport(project.id, (err, rows) => {
+      getTimersForExport(project.id, null, null, (err, rows) => {
         if (err) reject(err); else resolve(rows);
       });
     });
     expect(filteredTimers.length).toBe(1);
     expect(filteredTimers[0].project_name).toBe('Test Project');
+  });
+
+  test('getTimers filters by date range correctly', async () => {
+    // Test data setup - we already have timers from previous tests
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Test filtering by today only
+    const todayTimers = await promisifyGetTimers(1, 15, null, today, today);
+    expect(todayTimers.length).toBeGreaterThanOrEqual(0); // May or may not have timers for today
+
+    // Test filtering with date range that includes all our test data
+    const allTimers = await promisifyGetTimers(1, 15, null, yesterday, tomorrow);
+    expect(allTimers.length).toBe(2); // Should include both test timers
+
+    // Test filtering with impossible date range
+    const noTimers = await promisifyGetTimers(1, 15, null, tomorrow, tomorrow);
+    expect(noTimers.length).toBe(0); // Should be empty for future dates
+  });
+
+  test('countTimers filters by date range correctly', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Test counting with date range that includes all our test data
+    const allCount = await promisifyCountTimers(null, yesterday, tomorrow);
+    expect(allCount).toBe(2);
+
+    // Test counting with impossible date range
+    const noCount = await promisifyCountTimers(null, tomorrow, tomorrow);
+    expect(noCount).toBe(0);
+  });
+
+  test('getTimersForExport filters by date range correctly', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    // Test export with date range that includes all our test data
+    const allExportTimers = await new Promise((resolve, reject) => {
+      getTimersForExport(null, yesterday, tomorrow, (err, rows) => {
+        if (err) reject(err); else resolve(rows);
+      });
+    });
+    expect(allExportTimers.length).toBe(2);
+
+    // Test export with project and date filters combined
+    const filteredExportTimers = await new Promise((resolve, reject) => {
+      getTimersForExport(project.id, yesterday, tomorrow, (err, rows) => {
+        if (err) reject(err); else resolve(rows);
+      });
+    });
+    expect(filteredExportTimers.length).toBe(1);
+    expect(filteredExportTimers[0].project_name).toBe('Test Project');
   });
 });

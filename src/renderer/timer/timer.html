@@ -12,33 +12,40 @@
 <body>
   <div class="container">
     <div class="block">
-      <p>Current theme source: <strong id="theme-source">System</strong></p>
+      <header>
+        <h1>Timer Tracker</h1>
+      </header>
 
-      <button class="button-theme" id="toggle-dark-mode">
-        Toggle Dark Mode
-      </button>
-      <button class="button-theme" id="reset-to-system">
-        Reset to System Theme
-      </button>
+      <div class="timer-section">
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="buttons">
+          <button id="start-btn" class="btn btn-success btn-lg">
+            <span>Start Timer</span>
+          </button>
+          <button id="stop-btn" class="btn btn-danger btn-lg" disabled>
+            <span>Stop Timer</span>
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="block">
-      <h2>Select Project</h2>
-      <select id="project-dropdown" class="form-input project-dropdown">
-        <option value="" disabled selected>Select a project</option>
-      </select>
-      <input type="text" id="task-desc" placeholder="What are you working on?" required class="form-input" />
-    </div>
-
-    <div class="block">
-      <h1>Timer Tracker</h1>
-      <div class="timer-display" id="timer-display">00:00:00</div>
-      <div class="buttons">
-        <button id="start-btn">Start</button>
-        <button id="stop-btn" disabled>Stop</button>
+      <h2>Project & Task</h2>
+      <div class="form-group">
+        <label for="project-dropdown" class="form-label">Select Project</label>
+        <select id="project-dropdown" class="form-select">
+          <option value="" disabled selected>Select a project</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="task-desc" class="form-label">Task Description</label>
+        <input type="text" id="task-desc" placeholder="What are you working on?" required class="form-input" />
       </div>
     </div>
   </div>
+
+  <script src="../../shared/utils/theme.js"></script>
+  <script src="../../shared/components/icons.js"></script>
   <script src="timer.js"></script>
 </body>
 
