@@ -6,12 +6,21 @@
   "scripts": {
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll",
-    "start": "set NODE_ENV=development&&electron ."
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
   },
   "author": "flvrm92",
   "license": "ISC",
   "devDependencies": {
-    "@electron-forge/cli": "^7.5.0",
+    "@electron-forge/cli": "^7.8.3",
+    "@electron-forge/maker-deb": "^7.8.3",
+    "@electron-forge/maker-rpm": "^7.8.3",
+    "@electron-forge/maker-squirrel": "^7.8.3",
+    "@electron-forge/maker-zip": "^7.8.3",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.8.3",
+    "@electron-forge/plugin-fuses": "^7.8.3",
+    "@electron/fuses": "^1.8.0",
     "@types/jest": "^29.5.12",
     "electron": "^33.2.0",
     "electron-reload": "^2.0.0-alpha.1",
@@ -19,6 +28,7 @@
     "jest": "^29.7.0"
   },
   "dependencies": {
+    "electron-squirrel-startup": "^1.0.1",
     "sqlite3": "^5.1.7"
   }
 }

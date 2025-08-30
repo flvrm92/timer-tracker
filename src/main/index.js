@@ -1,9 +1,9 @@
 const { app, BrowserWindow, Menu, Tray } = require('electron');
 const path = require('node:path')
-const setupIpcHandlers = require('./ipcHandlers');
-const fs = require('fs');
 
 const env = process.env.NODE_ENV || 'development';
+
+process.env.DB_PATH = path.join(app.getPath('userData'), 'timers.db');
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -111,14 +111,13 @@ const createWindow = () => {
   ]);
 
   Menu.setApplicationMenu(menu);
-
 }
 
+const setupIpcHandlers = require('./ipcHandlers');
 setupIpcHandlers();
 
 app.whenReady().then(() => {
-  createWindow()
-
+  createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })

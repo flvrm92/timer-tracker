@@ -2,7 +2,6 @@ const { ipcMain, nativeTheme, dialog } = require('electron');
 const { insertTimer, insertProject, getProjects, deleteProject, getTimers, countTimers, updateTimer, deleteTimer, getTimersForExport } = require('../infra/database');
 const { generateCSV, generateFileName } = require('../shared/utils/csvUtils');
 const fs = require('fs');
-const path = require('path');
 
 function setupIpcHandlers() {
   ipcMain.on('add-project', (event, name) => {

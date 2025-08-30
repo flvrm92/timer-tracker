@@ -1,8 +1,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-// Initialize the database (allow override for tests via DB_PATH)
-const dbPath = process.env.DB_PATH ? process.env.DB_PATH : path.join(__dirname, 'timers.db');
+const dbPath = process.env.DB_PATH;
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
     console.error('Error connecting to SQLite:', err.message);
