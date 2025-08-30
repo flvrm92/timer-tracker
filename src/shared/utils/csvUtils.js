@@ -49,12 +49,24 @@ function generateCSV(timers) {
     'Start Time',
     'End Date',
     'End Time',
-    'Duration'
+    'Duration',
+    'Hourly Rate',
+    'Amount Earned'
   ];
 
   let csv = headers.map(escapeCSVField).join(',') + '\n';
 
   timers.forEach(timer => {
+    // Format hourly rate (only show for billable projects)
+    const hourlyRate = timer.is_billable && timer.hourly_rate
+      ? `$${parseFloat(timer.hourly_rate).toFixed(2)}`
+      : '';
+
+    // Format amount earned
+    const amountEarned = timer.amount_earned
+      ? `$${parseFloat(timer.amount_earned).toFixed(2)}`
+      : '';
+
     const row = [
       timer.project_name || '',
       timer.task_description || '',
@@ -62,7 +74,9 @@ function generateCSV(timers) {
       formatTime(timer.start_time),
       formatDate(timer.end_time),
       formatTime(timer.end_time),
-      formatDuration(timer.duration)
+      formatDuration(timer.duration),
+      hourlyRate,
+      amountEarned
     ];
 
     csv += row.map(escapeCSVField).join(',') + '\n';

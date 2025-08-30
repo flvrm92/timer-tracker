@@ -1,15 +1,48 @@
 const { ipcMain, nativeTheme, dialog } = require('electron');
-const { insertTimer, insertProject, getProjects, deleteProject, getTimers, countTimers, updateTimer, deleteTimer, getTimersForExport } = require('../infra/database');
+const {
+  insertTimer,
+  insertProject,
+  getProjects,
+  getProjectById,
+  deleteProject,
+  getTimers,
+  countTimers,
+  updateTimer,
+  deleteTimer,
+  getTimersForExport,
+  initializeDatabase } = require('../infra/database');
 const { generateCSV, generateFileName } = require('../shared/utils/csvUtils');
 const fs = require('fs');
 
 function setupIpcHandlers() {
-  ipcMain.on('add-project', (event, name) => {
-    insertProject(name, (err, project) => {
-      if (!err) {
-        event.sender.send('project-added', project);
-      }
-    });
+  // Initialize database and run migrations when the app starts
+  initializeDatabase((err) => {
+    if (err) {
+      console.error('Failed to initialize database:',
+        err);
+    } else {
+      console.log('Database initialization completed successfully');
+    }
+  });
+
+  ipcMain.on('add-project', (event, projectData) => {
+    // Handle both old (string) and new (object) format for backward compatibility
+    if (typeof projectData === 'string') {
+      // Legacy format: just the project name
+      insertProject(projectData, (err, project) => {
+        if (!err) {
+          event.sender.send('project-added', project);
+        }
+      });
+    } else {
+      // New format: object with name, isBillable, hourlyRate
+      const { name, isBillable, hourlyRate } = projectData;
+      insertProject(name, isBillable, hourlyRate, (err, project) => {
+        if (!err) {
+          event.sender.send('project-added', project);
+        }
+      });
+    }
   });
 
   ipcMain.on('delete-project', (event, id) => {
@@ -27,7 +60,28 @@ function setupIpcHandlers() {
   });
 
   ipcMain.on('save-timer', (event, { selectedProjectId, startTime, endTime, duration, taskDesc }) => {
-    insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc);
+    // Get project details to calculate amount earned
+    getProjectById(selectedProjectId, (err, project) => {
+      if (err) {
+        console.error('Error getting project for timer calculation:', err);
+        // Fall back to inserting timer without amount calculation
+        insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc);
+        return;
+      }
+
+      let amountEarned = null;
+
+      // Calculate amount earned if project is billable
+      if (project && project.is_billable && project.hourly_rate) {
+        const durationInHours = duration / 3600; // Convert seconds to hours
+        amountEarned = durationInHours * parseFloat(project.hourly_rate);
+        // Round to 2 decimal places
+        amountEarned = Math.round(amountEarned * 100) / 100;
+      }
+
+      // Insert timer with calculated amount
+      insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc, amountEarned);
+    });
   });
 
   ipcMain.on('get-timers', (event, { page, projectId, startDate, endDate } = { page: 1 }) => {

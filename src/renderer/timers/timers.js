@@ -133,6 +133,11 @@ function renderRows(rows) {
     const startLocal = isoToLocalInput(row.start_time);
     const endLocal = isoToLocalInput(row.end_time);
 
+    // Format amount earned
+    const amountEarned = row.amount_earned
+      ? `$${parseFloat(row.amount_earned).toFixed(2)}`
+      : '';
+
     tr.innerHTML = `
       <td>${row.id}</td>
       <td>${row.project_name || ''}</td>
@@ -140,6 +145,7 @@ function renderRows(rows) {
       <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
       <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
       <td class="duration-cell">${formatDuration(row.duration)}</td>
+      <td style="text-align: right;">${amountEarned}</td>
       <td>
         ${createActionButtons()}
         <div class="error" style="display:none"></div>
@@ -380,6 +386,11 @@ window.ipcRenderer.on('timer-updated', (row) => {
   const startLocal = isoToLocalInput(row.start_time);
   const endLocal = isoToLocalInput(row.end_time);
 
+  // Format amount earned
+  const amountEarned = row.amount_earned
+    ? `$${parseFloat(row.amount_earned).toFixed(2)}`
+    : '';
+
   tr.innerHTML = `
     <td>${row.id}</td>
     <td>${row.project_name || ''}</td>
@@ -387,6 +398,7 @@ window.ipcRenderer.on('timer-updated', (row) => {
     <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
     <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
     <td class="duration-cell">${formatDuration(row.duration)}</td>
+    <td style="text-align: right;">${amountEarned}</td>
     <td class="actions">
       ${createActionButtons()}
       <div class="error" style="display:none"></div>
