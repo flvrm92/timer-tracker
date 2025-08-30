@@ -1,5 +1,7 @@
 const projectForm = document.getElementById('project-form');
 const projectNameInput = document.getElementById('project-name');
+const isBillableInput = document.getElementById('is-billable');
+const hourlyRateInput = document.getElementById('hourly-rate');
 const projectsList = document.getElementById('projects-list');
 
 // Initialize theme management
@@ -8,6 +10,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeManager = window.ThemeUtils.getThemeManager();
     // Theme is automatically applied
   }
+
+  // Add event listener for billable checkbox
+  isBillableInput.addEventListener('change', () => {
+    if (isBillableInput.checked) {
+      hourlyRateInput.disabled = false;
+      hourlyRateInput.focus();
+    } else {
+      hourlyRateInput.disabled = true;
+      hourlyRateInput.value = '';
+    }
+  });
 });
 
 function loadProjects() {
@@ -53,7 +66,7 @@ function populateProjects(projects) {
   if (projects.length === 0) {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td colspan="3" style="text-align: center; color: var(--color-text-muted); padding: var(--space-8);">
+      <td colspan="5" style="text-align: center; color: var(--color-text-muted); padding: var(--space-8);">
         No projects found. Create your first project above.
       </td>
     `;
@@ -63,9 +76,20 @@ function populateProjects(projects) {
 
   projects.forEach((project) => {
     const row = document.createElement('tr');
+
+    // Format billable status
+    const billableStatus = project.is_billable ? '✓' : '';
+
+    // Format hourly rate
+    const hourlyRate = project.is_billable && project.hourly_rate
+      ? `$${parseFloat(project.hourly_rate).toFixed(2)}`
+      : '';
+
     row.innerHTML = `
       <td>${project.id}</td>
       <td><strong>${project.name}</strong></td>
+      <td style="text-align: center;">${billableStatus}</td>
+      <td style="text-align: right;">${hourlyRate}</td>
       <td class="actions">
         ${createDeleteButton(project.id, project.name)}
       </td>
@@ -77,6 +101,8 @@ function populateProjects(projects) {
 projectForm.addEventListener('submit', (e) => {
   e.preventDefault();
   const name = projectNameInput.value.trim();
+  const isBillable = isBillableInput.checked;
+  const hourlyRate = hourlyRateInput.value.trim();
 
   if (!name) {
     showErrorMessage('Please enter a project name.');
@@ -88,13 +114,34 @@ projectForm.addEventListener('submit', (e) => {
     return;
   }
 
+  // Validate hourly rate if billable is selected
+  if (isBillable) {
+    if (!hourlyRate) {
+      showErrorMessage('Please enter an hourly rate for billable projects.');
+      return;
+    }
+
+    const rate = parseFloat(hourlyRate);
+    if (isNaN(rate) || rate < 0) {
+      showErrorMessage('Please enter a valid positive hourly rate.');
+      return;
+    }
+  }
+
   // Disable form during submission
   const submitBtn = projectForm.querySelector('button[type="submit"]');
   const originalText = submitBtn.innerHTML;
   submitBtn.disabled = true;
   submitBtn.innerHTML = '<span class="spinner"></span> Adding...';
 
-  window.ipcRenderer.send('add-project', name);
+  // Send project data with billable information
+  const projectData = {
+    name,
+    isBillable,
+    hourlyRate: isBillable ? parseFloat(hourlyRate) : null
+  };
+
+  window.ipcRenderer.send('add-project', projectData);
 
   // Re-enable form after a delay (will be properly reset when project is added)
   setTimeout(() => {
@@ -174,12 +221,17 @@ window.ipcRenderer.on('projects', (projects) => {
 window.ipcRenderer.on('project-added', (project) => {
   // Reset form
   projectNameInput.value = '';
+  isBillableInput.checked = false;
+  hourlyRateInput.value = '';
+  hourlyRateInput.disabled = true;
+
   const submitBtn = projectForm.querySelector('button[type="submit"]');
   submitBtn.disabled = false;
   submitBtn.innerHTML = '<span>Add Project</span>';
 
   // Show success message
-  showSuccessMessage(`Project "${project.name}" has been created successfully.`);
+  const billableText = project.is_billable ? ` (Billable at $${parseFloat(project.hourly_rate || 0).toFixed(2)}/hr)` : '';
+  showSuccessMessage(`Project "${project.name}"${billableText} has been created successfully.`);
 
   // Reload projects
   loadProjects();

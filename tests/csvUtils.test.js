@@ -32,23 +32,29 @@ describe('CSV Utilities', () => {
         task_description: 'Task 1',
         start_time: '2024-03-15T14:30:00.000Z',
         end_time: '2024-03-15T15:30:00.000Z',
-        duration: 3600
+        duration: 3600,
+        is_billable: true,
+        hourly_rate: 50.00,
+        amount_earned: 50.00
       },
       {
         project_name: 'Another Project',
         task_description: 'Task with, comma',
         start_time: '2024-03-15T16:00:00.000Z',
         end_time: '2024-03-15T16:30:00.000Z',
-        duration: 1800
+        duration: 1800,
+        is_billable: false,
+        hourly_rate: null,
+        amount_earned: null
       }
     ];
 
     const csv = generateCSV(timers);
     const lines = csv.split('\n');
 
-    expect(lines[0]).toBe('Project,Description,Start Date,Start Time,End Date,End Time,Duration');
-    expect(lines[1]).toBe('Test Project,Task 1,15/03/2024,14:30:00,15/03/2024,15:30:00,1:00');
-    expect(lines[2]).toBe('Another Project,"Task with, comma",15/03/2024,16:00:00,15/03/2024,16:30:00,0:30');
+    expect(lines[0]).toBe('Project,Description,Start Date,Start Time,End Date,End Time,Duration,Hourly Rate,Amount Earned');
+    expect(lines[1]).toBe('Test Project,Task 1,15/03/2024,14:30:00,15/03/2024,15:30:00,1:00,$50.00,$50.00');
+    expect(lines[2]).toBe('Another Project,"Task with, comma",15/03/2024,16:00:00,15/03/2024,16:30:00,0:30,,');
   });
 
   test('generateFileName creates proper filename', () => {

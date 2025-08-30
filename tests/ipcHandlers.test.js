@@ -14,10 +14,14 @@ jest.mock('../src/infra/database', () => ({
   insertTimer: jest.fn(),
   insertProject: jest.fn(),
   getProjects: jest.fn(),
+  getProjectById: jest.fn(),
   deleteProject: jest.fn(),
   getTimers: jest.fn(),
   countTimers: jest.fn(),
-  updateTimer: jest.fn()
+  updateTimer: jest.fn(),
+  deleteTimer: jest.fn(),
+  getTimersForExport: jest.fn(),
+  initializeDatabase: jest.fn((callback) => callback(null))
 }));
 
 const db = require('../src/infra/database');
