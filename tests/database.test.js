@@ -6,7 +6,7 @@ process.env.DB_PATH = path.join(__dirname, 'test-timers.db');
 // Fresh DB per test run
 if (fs.existsSync(process.env.DB_PATH)) fs.unlinkSync(process.env.DB_PATH);
 
-const { insertTimer, insertProject, getProjects, getTimers, countTimers, updateTimer, getTimersForExport, initializeDatabase } = require('../src/infra/database');
+const { insertTimer, insertProject, getTimers, countTimers, updateTimer, getTimersForExport, initializeDatabase } = require('../src/infra/database');
 
 function promisifyInitializeDatabase() {
   return new Promise((resolve, reject) => {
