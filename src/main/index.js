@@ -30,9 +30,18 @@ const createWindow = () => {
     {
       label: 'Timers',
       submenu: [{
-        label: 'List & Edit',
+        label: 'List and Edit',
         click: () => win.loadFile('src/renderer/timers/timers.html')
       }]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        {
+          label: 'Timer',
+          click: () => win.loadFile('src/renderer/timer/timer.html')
+        }
+      ]
     },
     {
       label: 'View',
@@ -92,15 +101,6 @@ const createWindow = () => {
           click: () => {
             win.webContents.toggleDevTools()
           }
-        }
-      ]
-    },
-    {
-      label: 'Window',
-      submenu: [
-        {
-          label: 'Timer',
-          click: () => win.loadFile('src/renderer/timer/timer.html')
         }
       ]
     },

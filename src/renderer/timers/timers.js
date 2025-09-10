@@ -135,7 +135,7 @@ function renderRows(rows) {
 
     // Format amount earned
     const amountEarned = row.amount_earned
-      ? `$${parseFloat(row.amount_earned).toFixed(2)}`
+      ? `R$ ${parseFloat(row.amount_earned).toFixed(2)}`
       : '';
 
     tr.innerHTML = `
@@ -146,7 +146,7 @@ function renderRows(rows) {
       <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
       <td class="duration-cell">${formatDuration(row.duration)}</td>
       <td style="text-align: right;">${amountEarned}</td>
-      <td>
+      <td style="text-align: right;">
         ${createActionButtons()}
         <div class="error" style="display:none"></div>
       </td>

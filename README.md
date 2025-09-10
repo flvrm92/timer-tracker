@@ -12,6 +12,8 @@ A simple and efficient desktop time tracking application built with Electron and
 - **📤 CSV Export**: Export filtered timer data to CSV files
 - **🌙 Theme Support**: Light, dark, and system theme options
 - **✅ Comprehensive Testing**: Full test coverage with Jest
+- **💲 Billable Projects**: Mark projects as billable with an hourly rate; timers automatically calculate amount earned
+- **🗃️ Database Migrations**: Automatic schema migration & version tracking (schema_version table)
 
 ## Screenshots
 
@@ -34,8 +36,8 @@ A simple and efficient desktop time tracking application built with Electron and
 ## Installation
 
 ### Prerequisites
-- Node.js (v14 or higher)
-- npm
+- Node.js (v18 or higher recommended; Electron 33 targets recent Node APIs)
+- npm (comes with Node)
 
 ### Setup
 1. Clone the repository:
@@ -49,9 +51,19 @@ A simple and efficient desktop time tracking application built with Electron and
    npm install
    ```
 
-3. Start the application:
+3. Start the application (development with hot reload):
    ```bash
    npm start
+   ```
+
+4. Run the test suite:
+   ```bash
+   npm test
+   ```
+
+5. Create distributable packages (uses Electron Forge makers):
+   ```bash
+   npm run make
    ```
 
 ## Usage
@@ -72,6 +84,33 @@ Change themes via the View menu:
 - Light mode
 - Dark mode  
 - System (follows OS preference)
+
+## Running / Development Session
+
+Follow this typical development session flow:
+
+1. Install deps (first time only): `npm install`
+2. Launch in dev mode (auto-reload main & renderer): `npm start`
+3. Open DevTools if needed via menu: View → Toggle DevTools (or Ctrl+Shift+I)
+4. Run tests while coding: `npm test` (one-off) or `npm run test:watch`
+5. Inspect code coverage in `coverage/` after tests
+6. Package the app for distribution: `npm run make`
+
+### Database Location
+The SQLite database file is created automatically at runtime. Its path is set internally via:
+```
+process.env.DB_PATH = path.join(app.getPath('userData'), 'timers.db');
+```
+On Windows this typically resolves to:
+`C:\Users\\<USER>\\AppData\\Roaming\\time-tracker\\timers.db`
+
+To use a different database during development or tests you can set `DB_PATH` before launching (tests already do this).
+
+### Environment Variables
+| Variable | Purpose | Default / How Set |
+|----------|---------|-------------------|
+| DB_PATH  | SQLite database file path | Auto-set in `src/main/index.js` to userData/timers.db |
+| NODE_ENV | Controls dev tools & hot reload | Usually `development` when running `npm start` |
 
 ## Architecture
 
@@ -101,25 +140,37 @@ src/
 └── settings/          # Electron preload scripts
 ```
 
-### Database Schema
+### Database Schema & Migrations
+The application auto-initializes and migrates the database on startup. Current schema version: 2 (tracked in `schema_version`).
+
 ```sql
--- Projects table
+-- Projects table (billable support)
 CREATE TABLE projects (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   name TEXT NOT NULL,
+   is_billable BOOLEAN DEFAULT 0,
+   hourly_rate DECIMAL(10,2) DEFAULT NULL
 );
 
--- Timers table
+-- Timers table (stores computed amount when billable)
 CREATE TABLE timers (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    project_id INTEGER,
-    start_time TEXT,
-    end_time TEXT,
-    duration INTEGER,
-    task_description TEXT,
-    FOREIGN KEY (project_id) REFERENCES projects(id)
+   id INTEGER PRIMARY KEY AUTOINCREMENT,
+   project_id INTEGER,
+   start_time TEXT,
+   end_time TEXT,
+   duration INTEGER,
+   task_description TEXT NULLABLE,
+   amount_earned DECIMAL(10,2) DEFAULT NULL,
+   FOREIGN KEY (project_id) REFERENCES projects(id)
+);
+
+-- Schema version tracking
+CREATE TABLE schema_version (
+   version INTEGER PRIMARY KEY
 );
 ```
+
+When you start the app, migrations run automatically to add any missing billable-related columns (idempotent). No manual intervention required.
 
 ## Development
 
@@ -166,10 +217,11 @@ npm start
 - Data export to CSV format
 
 ### CSV Export
-- Customizable filtering before export
+- Customizable filtering before export (project & date range)
 - Proper CSV formatting with field escaping
-- Automatic filename generation with timestamps
-- Support for all projects or project-specific exports
+- Automatic filename generation with timestamps (includes project name if filtered)
+- Includes billable metadata (Hourly Rate, Amount Earned) when applicable
+- Supports all projects or a single project
 
 ## Contributing
 
@@ -191,4 +243,4 @@ npm start
 
 ---
 
-*Built with ❤️ using Electron and SQLite*
+*Built with ❤️ using Electron, SQLite & Electron Forge*

@@ -21,7 +21,6 @@ body {
 }
 
 .container {
-  text-align: center;
   padding: var(--space-6);
   border-radius: var(--radius-lg);
   min-width: 400px;
@@ -37,6 +36,10 @@ body {
   margin-bottom: var(--space-4);
   border: 1px solid var(--color-border);
   transition: all var(--transition-base);
+}
+
+.block-header {
+  text-align: center;
 }
 
 .block:hover {
@@ -157,6 +160,19 @@ header a:focus {
   margin-bottom: var(--space-6);
 }
 
+.project-form {
+  width: 100%;
+  gap: var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-direction: row;
+}
+
+.project-name {
+  width: 75%;
+}
+
 /* Legacy form styles - will be replaced with .form-* classes */
 form input {
   padding: var(--space-3) var(--space-4);
@@ -209,7 +225,7 @@ table {
 th,
 td {
   padding: var(--space-3) var(--space-4);
-  text-align: left;
+
   border-bottom: 1px solid var(--color-border);
   font-size: var(--font-size-sm);
 }
@@ -224,6 +240,10 @@ th {
   position: sticky;
   top: 0;
   z-index: 10;
+}
+
+th:last-child {
+  text-align: right;
 }
 
 tbody tr {
@@ -275,6 +295,10 @@ tbody tr:nth-child(odd) {
 .project-dropdown {
   cursor: pointer;
   transition: all var(--transition-fast);
+}
+
+.actions {
+  text-align: right;
 }
 
 /* Responsive Design */

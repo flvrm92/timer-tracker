@@ -82,7 +82,7 @@ function populateProjects(projects) {
 
     // Format hourly rate
     const hourlyRate = project.is_billable && project.hourly_rate
-      ? `$${parseFloat(project.hourly_rate).toFixed(2)}`
+      ? `R$ ${parseFloat(project.hourly_rate).toFixed(2)}`
       : '';
 
     row.innerHTML = `
