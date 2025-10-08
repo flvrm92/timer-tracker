@@ -1,26 +1,4 @@
-function formatDate(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-
-  const day = date.getUTCDate().toString().padStart(2, '0');
-  const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-  const year = date.getUTCFullYear();
-
-  return `${day}/${month}/${year}`;
-}
-
-function formatTime(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  if (isNaN(date.getTime())) return '';
-
-  const hours = date.getUTCHours().toString().padStart(2, '0');
-  const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-  const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-
-  return `${hours}:${minutes}:${seconds}`;
-}
+const { formatDate, formatTime } = require('./dateHelper');
 
 function formatDuration(seconds) {
   if (!seconds || seconds < 0) return '0:00';
@@ -42,6 +20,7 @@ function escapeCSVField(field) {
 }
 
 function generateCSV(timers) {
+  console.log('Generating CSV for timers:', timers);
   const headers = [
     'Project',
     'Description',
@@ -95,8 +74,6 @@ function generateFileName(projectName = null) {
 }
 
 module.exports = {
-  formatDate,
-  formatTime,
   formatDuration,
   escapeCSVField,
   generateCSV,

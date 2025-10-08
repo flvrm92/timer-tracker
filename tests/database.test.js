@@ -38,9 +38,9 @@ function promisifyCountTimers(projectId = null, startDate = null, endDate = null
   });
 }
 
-function promisifyUpdateTimer(id, start, end) {
+function promisifyUpdateTimer(id, start, end, amount_earned) {
   return new Promise((resolve, reject) => {
-    updateTimer(id, start, end, (err, row) => {
+    updateTimer(id, start, end, amount_earned, (err, row) => {
       if (err) reject(err); else resolve(row);
     });
   });
@@ -79,7 +79,7 @@ describe('Database timer operations', () => {
     const row = rows[0];
     const newStart = new Date().toISOString();
     const newEnd = new Date(Date.now() + 8000).toISOString();
-    const updated = await promisifyUpdateTimer(row.id, newStart, newEnd);
+    const updated = await promisifyUpdateTimer(row.id, newStart, newEnd, 0);
     expect(updated.duration).toBe(8);
   });
 
@@ -88,7 +88,7 @@ describe('Database timer operations', () => {
     const row = rows[0];
     const laterStart = new Date(Date.now() + 10000).toISOString();
     const earlierEnd = new Date().toISOString();
-    await expect(promisifyUpdateTimer(row.id, laterStart, earlierEnd)).rejects.toThrow('End time must be after start time');
+    await expect(promisifyUpdateTimer(row.id, laterStart, earlierEnd, 0)).rejects.toThrow('End time must be after start time');
   });
 
   test('getTimers filters by project correctly', async () => {

@@ -1,4 +1,5 @@
-const { generateCSV, formatDate, formatTime, formatDuration, escapeCSVField, generateFileName } = require('../src/shared/utils/csvUtils');
+const { generateCSV, formatDuration, escapeCSVField, generateFileName } = require('../src/shared/utils/csvUtils');
+const { formatDate, formatTime } = require('../src/shared/utils/dateHelper');
 
 describe('CSV Utilities', () => {
   test('formatDate formats ISO string correctly', () => {
