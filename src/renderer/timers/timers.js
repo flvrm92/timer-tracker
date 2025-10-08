@@ -25,30 +25,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-function formatDuration(sec) {
-  const s = Number(sec) || 0;
-  const hrs = Math.floor(s / 3600).toString().padStart(2, '0');
-  const mins = Math.floor((s % 3600) / 60).toString().padStart(2, '0');
-  const secs = (s % 60).toString().padStart(2, '0');
-  return `${hrs}:${mins}:${secs}`;
-}
-
-function isoToLocalInput(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '';
-  const off = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - off * 60000);
-  return local.toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
-}
-
-function localInputToIso(val) {
-  if (!val) return null;
-  const d = new Date(val);
-  if (isNaN(d.getTime())) return null;
-  return d.toISOString();
-}
-
 function getMonthDateRange(monthFilter) {
   const now = new Date();
 
@@ -84,9 +60,9 @@ function computeDuration(startIso, endIso) {
 function createActionButtons() {
   if (!window.IconUtils) {
     return `
-      <button class="btn btn-sm btn-success save-btn" disabled title="Save Changes">Save</button>
-      <button class="btn btn-sm btn-secondary cancel-btn" disabled title="Cancel Changes">Cancel</button>
-      <button class="btn btn-sm btn-danger delete-btn" title="Delete Timer">Delete</button>
+      <button onclick="handleSaveClick(event)" class="btn btn-sm btn-success save-btn" disabled title="Save Changes">Save</button>
+      <button onclick="handleCancelClick(event)" class="btn btn-sm btn-secondary cancel-btn" disabled title="Cancel Changes">Cancel</button>
+      <button onclick="handleDeleteClick(event)" class="btn btn-sm btn-danger delete-btn" title="Delete Timer">Delete</button>
     `;
   }
 
@@ -109,19 +85,52 @@ function createActionButtons() {
   });
 
   return `
-    <button class="btn btn-sm btn-success btn-icon save-btn tooltip" disabled title="Save Changes" aria-label="Save Changes">
+    <button onclick="handleSaveClick(event)" class="btn btn-sm btn-success btn-icon save-btn tooltip" disabled title="Save Changes" aria-label="Save Changes">
       ${saveIcon}
       <span class="tooltip-text">Save Changes</span>
     </button>
-    <button class="btn btn-sm btn-secondary btn-icon cancel-btn tooltip" disabled title="Cancel Changes" aria-label="Cancel Changes">
+    <button onclick="handleCancelClick(event)" class="btn btn-sm btn-secondary btn-icon cancel-btn tooltip" disabled title="Cancel Changes" aria-label="Cancel Changes">
       ${cancelIcon}
       <span class="tooltip-text">Cancel Changes</span>
     </button>
-    <button class="btn btn-sm btn-danger btn-icon delete-btn tooltip" title="Delete Timer" aria-label="Delete Timer">
+    <button onclick="handleDeleteClick(event)" class="btn btn-sm btn-danger btn-icon delete-btn tooltip" title="Delete Timer" aria-label="Delete Timer">
       ${deleteIcon}
       <span class="tooltip-text">Delete Timer</span>
     </button>
   `;
+}
+
+function handleSaveClick(event) {
+  const tr = event.target.closest('tr');
+  if (!tr) return;
+  const timerId = Number(tr.dataset.id);
+  if (isNaN(timerId)) return;
+
+  const startVal = tr.querySelector('.start-input').value;
+  const endVal = tr.querySelector('.end-input').value;
+  const startIso = localInputToIso(startVal);
+  const endIso = localInputToIso(endVal);
+
+  const amountEarnedText = tr.querySelector('.amount-earned-cell').textContent || '';
+  const amountEarned = parseFloat(amountEarnedText.replace('R$', '').trim()) || 0;
+
+  window.ipcRenderer.send('update-timer', { id: timerId, start_time: startIso, end_time: endIso, amount_earned: amountEarned });
+  // markDirty(tr, false);
+}
+
+function handleCancelClick(event) {
+  fetchPage();
+}
+
+function handleDeleteClick(event) {
+  const tr = event.target.closest('tr');
+  if (!tr) return;
+  const timerId = Number(tr.dataset.id);
+  if (isNaN(timerId)) return;
+
+  if (confirm('Are you sure you want to delete this timer?')) {
+    window.ipcRenderer.send('delete-timer', { id: timerId });
+  }
 }
 
 function renderRows(rows) {
@@ -138,18 +147,19 @@ function renderRows(rows) {
       ? `R$ ${parseFloat(row.amount_earned).toFixed(2)}`
       : '';
 
-    tr.innerHTML = `
+    tr.innerHTML = `      
       <td>${row.id}</td>
       <td>${row.project_name || ''}</td>
       <td>${row.task_description || ''}</td>
       <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
       <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
       <td class="duration-cell">${formatDuration(row.duration)}</td>
-      <td style="text-align: right;">${amountEarned}</td>
+      <td class="amount-earned-cell" style="text-align: right;">${amountEarned}</td>
       <td style="text-align: right;">
         ${createActionButtons()}
         <div class="error" style="display:none"></div>
       </td>
+      <td class="hourly-rate-cell" style="display:none">${row.hourly_rate}</td>
     `;
 
     bodyEl.appendChild(tr);
@@ -175,6 +185,12 @@ function updateComputedDuration(tr) {
   const endIso = localInputToIso(endVal);
   const durSec = computeDuration(startIso, endIso);
   tr.querySelector('.duration-cell').textContent = formatDuration(durSec);
+
+  const hourlyRate = parseFloat(tr.querySelector('.hourly-rate-cell').textContent) || 0;
+  const durationInHours = durSec / 3600;
+  const newAmountEarned = durationInHours * hourlyRate;
+  tr.querySelector('.amount-earned-cell').textContent = newAmountEarned ? `R$ ${newAmountEarned.toFixed(2)}` : '';
+
   return { startIso, endIso, durSec };
 }
 
@@ -201,28 +217,6 @@ function validateRow(tr, startIso, endIso) {
   }
   return true;
 }
-
-bodyEl.addEventListener('click', (e) => {
-  const tr = e.target.closest('tr');
-  if (!tr) return;
-
-  if (e.target.classList.contains('cancel-btn')) {
-    fetchPage(); // Reload with current filter
-  }
-
-  if (e.target.classList.contains('save-btn')) {
-    const startVal = tr.querySelector('.start-input').value;
-    const endVal = tr.querySelector('.end-input').value;
-    const startIso = localInputToIso(startVal);
-    const endIso = localInputToIso(endVal);
-    if (!validateRow(tr, startIso, endIso)) return;
-    window.ipcRenderer.send('update-timer', { id: Number(tr.dataset.id), start_time: startIso, end_time: endIso });
-  }
-
-  if (e.target.classList.contains('delete-btn')) {
-    window.ipcRenderer.send('delete-timer', { id: Number(tr.dataset.id) });
-  }
-});
 
 prevBtn.addEventListener('click', () => {
   if (currentPage > 1) {
@@ -388,7 +382,7 @@ window.ipcRenderer.on('timer-updated', (row) => {
 
   // Format amount earned
   const amountEarned = row.amount_earned
-    ? `$${parseFloat(row.amount_earned).toFixed(2)}`
+    ? `R$ ${parseFloat(row.amount_earned).toFixed(2)}`
     : '';
 
   tr.innerHTML = `
@@ -398,11 +392,12 @@ window.ipcRenderer.on('timer-updated', (row) => {
     <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
     <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
     <td class="duration-cell">${formatDuration(row.duration)}</td>
-    <td style="text-align: right;">${amountEarned}</td>
-    <td class="actions">
+    <td class="amount-earned-cell" style="text-align: right;">${amountEarned}</td>
+    <td style="text-align: right;">
       ${createActionButtons()}
       <div class="error" style="display:none"></div>
     </td>
+    <td class="hourly-rate-cell" style="display:none">${row.hourly_rate}</td>
   `;
 });
 

@@ -62,18 +62,18 @@ describe('IPC Handlers', () => {
   });
 
   test('update-timer success', () => {
-    db.updateTimer.mockImplementation((id, s, e, cb) => cb(null, { id, start_time: s, end_time: e, duration: 10 }));
+    db.updateTimer.mockImplementation((id, s, e, a, cb) => cb(null, { id, start_time: s, end_time: e, duration: 10, amount_earned: a }));
     const event = createMockEvent();
-    ipcMain.handlers['update-timer'](event, { id: 5, start_time: '2024-01-01T00:00:00.000Z', end_time: '2024-01-01T00:00:10.000Z' });
+    ipcMain.handlers['update-timer'](event, { id: 5, start_time: '2024-01-01T00:00:00.000Z', end_time: '2024-01-01T00:00:10.000Z', amount_earned: 5 });
     const updated = event.sender.sent.find(m => m.channel === 'timer-updated');
     expect(updated).toBeTruthy();
     expect(updated.payload.duration).toBe(10);
   });
 
   test('update-timer error', () => {
-    db.updateTimer.mockImplementation((id, s, e, cb) => cb(new Error('bad')));
+    db.updateTimer.mockImplementation((id, s, e, a, cb) => cb(new Error('bad')));
     const event = createMockEvent();
-    ipcMain.handlers['update-timer'](event, { id: 5, start_time: '2024-01-01T00:00:00.000Z', end_time: '2024-01-01T00:00:10.000Z' });
+    ipcMain.handlers['update-timer'](event, { id: 5, start_time: '2024-01-01T00:00:00.000Z', end_time: '2024-01-01T00:00:10.000Z', amount_earned: 5 });
     const err = event.sender.sent.find(m => m.channel === 'timer-update-error');
     expect(err).toBeTruthy();
     expect(err.payload.message).toBe('bad');

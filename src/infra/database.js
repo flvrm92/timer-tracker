@@ -1,5 +1,4 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 
 const dbPath = process.env.DB_PATH;
 const db = new sqlite3.Database(dbPath, (err) => {
@@ -279,19 +278,21 @@ function getTimerById(id, callback) {
   });
 }
 
-function updateTimer(id, startTime, endTime, callback) {
+function updateTimer(id, startTime, endTime, amount_earned, callback) {
   try {
     const start = new Date(startTime);
     const end = new Date(endTime);
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
       return callback(new Error('Invalid date format'));
     }
+
     const duration = Math.floor((end - start) / 1000);
     if (duration < 0) {
       return callback(new Error('End time must be after start time'));
     }
-    const query = `UPDATE timers SET start_time = ?, end_time = ?, duration = ? WHERE id = ?`;
-    db.run(query, [start.toISOString(), end.toISOString(), duration, id], function (err) {
+
+    const query = `UPDATE timers SET start_time = ?, end_time = ?, duration = ?, amount_earned = ? WHERE id = ?`;
+    db.run(query, [start.toISOString(), end.toISOString(), duration, amount_earned, id], function (err) {
       if (err) return callback(err);
       getTimerById(id, callback);
     });

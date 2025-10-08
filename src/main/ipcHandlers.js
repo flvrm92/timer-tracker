@@ -106,8 +106,8 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.on('update-timer', (event, { id, start_time, end_time }) => {
-    updateTimer(id, start_time, end_time, (err, updatedRow) => {
+  ipcMain.on('update-timer', (event, { id, start_time, end_time, amount_earned }) => {
+    updateTimer(id, start_time, end_time, amount_earned, (err, updatedRow) => {
       if (err) {
         return event.sender.send('timer-update-error', { id, message: err.message });
       }
