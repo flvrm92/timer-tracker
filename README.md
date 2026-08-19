@@ -11,7 +11,7 @@ A simple and efficient desktop time tracking application built with Electron and
 - **🔍 Advanced Filtering**: Filter timers by project and date range
 - **📤 CSV Export**: Export filtered timer data to CSV files
 - **🌙 Theme Support**: Light, dark, and system theme options
-- **✅ Comprehensive Testing**: Full test coverage with Jest
+- **✅ Automated Tests**: Jest test suite — 82 tests across 5 suites; ~81% statement coverage (preload and IPC handlers near full; dateHelper and main index partially covered)
 - **💲 Billable Projects**: Mark projects as billable with an hourly rate; timers automatically calculate amount earned
 - **🗃️ Database Migrations**: Automatic schema migration & version tracking (schema_version table)
 
@@ -36,7 +36,7 @@ A simple and efficient desktop time tracking application built with Electron and
 ## Installation
 
 ### Prerequisites
-- Node.js (v18 or higher recommended; Electron 33 targets recent Node APIs)
+- Node.js (v20 or higher recommended; Electron 41 bundles Node 22 internally; sqlite3 6.x requires native compilation via node-gyp which works reliably on Node 20+)
 - npm (comes with Node)
 
 ### Setup
@@ -51,7 +51,7 @@ A simple and efficient desktop time tracking application built with Electron and
    npm install
    ```
 
-3. Start the application (development with hot reload):
+3. Start the application in development mode:
    ```bash
    npm start
    ```
@@ -65,6 +65,8 @@ A simple and efficient desktop time tracking application built with Electron and
    ```bash
    npm run make
    ```
+
+   > **Current packaging lane:** Windows only (Squirrel installer via `@electron-forge/maker-squirrel`). Produces `time-tracker-1.0.0 Setup.exe` under `out/make/squirrel.windows/x64/`. MSIX / Microsoft Store packaging is deferred to a future phase.
 
 ## Usage
 
@@ -90,7 +92,7 @@ Change themes via the View menu:
 Follow this typical development session flow:
 
 1. Install deps (first time only): `npm install`
-2. Launch in dev mode (auto-reload main & renderer): `npm start`
+2. Launch in dev mode: `npm start`
 3. Open DevTools if needed via menu: View → Toggle DevTools (or Ctrl+Shift+I)
 4. Run tests while coding: `npm test` (one-off) or `npm run test:watch`
 5. Inspect code coverage in `coverage/` after tests
@@ -110,7 +112,7 @@ To use a different database during development or tests you can set `DB_PATH` be
 | Variable | Purpose | Default / How Set |
 |----------|---------|-------------------|
 | DB_PATH  | SQLite database file path | Auto-set in `src/main/index.js` to userData/timers.db |
-| NODE_ENV | Controls dev tools & hot reload | Usually `development` when running `npm start` |
+| NODE_ENV | Controls dev tools availability | Usually `development` when running `npm start` |
 
 ## Architecture
 
@@ -119,7 +121,6 @@ To use a different database during development or tests you can set `DB_PATH` be
 - **Backend**: Electron (Node.js)
 - **Database**: SQLite3
 - **Testing**: Jest
-- **Hot Reload**: electron-reloader (development)
 
 ### Project Structure
 ```
@@ -192,7 +193,7 @@ Test coverage is automatically generated and includes:
 View coverage reports in the `coverage/` directory after running tests.
 
 ### Development Mode
-The application includes hot reload functionality when running in development mode:
+Run the application in development mode. DevTools are available via View → Toggle DevTools (or Ctrl+Shift+I). No hot-reload package is active; restart `npm start` to pick up main-process changes:
 ```bash
 npm start
 ```
@@ -222,6 +223,9 @@ npm start
 - Automatic filename generation with timestamps (includes project name if filtered)
 - Includes billable metadata (Hourly Rate, Amount Earned) when applicable
 - Supports all projects or a single project
+- Files are saved as **UTF-8 with BOM** for correct display in Excel and Windows tools
+- Date columns (Start Time, End Time) use the local UI-aligned format: **dd/mm/yyyy HH:MM:SS**
+- Billable numeric fields (Hourly Rate, Amount Earned) export as plain decimal values (e.g. `50.00`), not currency text
 
 ## Contributing
 
