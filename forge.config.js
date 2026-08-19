@@ -10,23 +10,10 @@ module.exports = {
     {
       name: '@electron-forge/maker-squirrel',
       config: {
-        name: 'my_app',
+        name: 'time-tracker',
         authors: ['Flavio Moreno @flvrm92'],
         description: 'A simple timer tracker',
-        version: '0.0.1',
       },
-    },
-    {
-      name: '@electron-forge/maker-zip',
-      platforms: ['darwin'],
-    },
-    {
-      name: '@electron-forge/maker-deb',
-      config: {},
-    },
-    {
-      name: '@electron-forge/maker-rpm',
-      config: {},
     },
   ],
   plugins: [

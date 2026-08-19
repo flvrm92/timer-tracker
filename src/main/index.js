@@ -1,7 +1,9 @@
 const { app, BrowserWindow, Menu, Tray } = require('electron');
 const path = require('node:path')
 
-const env = process.env.NODE_ENV || 'development';
+// Squirrel (Windows installer) lifecycle guard.
+// Short-circuits install/update/uninstall events before any app bootstrap fires.
+if (require('electron-squirrel-startup')) { app.quit(); }
 
 process.env.DB_PATH = path.join(app.getPath('userData'), 'timers.db');
 
@@ -11,10 +13,10 @@ const createWindow = () => {
     height: 900,
     webPreferences: {
       preload: path.join(__dirname, '../settings/preload.js'),
-      devTools: env === 'development',
+      devTools: !app.isPackaged,
+      contextIsolation: true,
+      nodeIntegration: false,
     },
-    enableRemoteModule: false,
-    nodeIntegration: false,
   })
 
   win.loadFile('src/renderer/timer/timer.html')
@@ -127,16 +129,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-// hot reload
-// If development environment 
-if (env === 'development') {
-  try {
-    require('electron-reloader')(module, {
-      debug: true,
-      watchRenderer: true
-    });
-  } catch (_) { console.log('Error'); }
-} else {
+if (app.isPackaged) {
   Menu.setApplicationMenu(null);
 }
 
