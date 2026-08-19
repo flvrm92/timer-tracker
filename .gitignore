@@ -50,3 +50,10 @@ electron-builder.yaml
 pbis/**/*
 
 coverage/**/*
+
+# Generated MSIX manifest (rendered from packaging/Package.appxmanifest.template)
+packaging/Package.appxmanifest
+
+# Local sideload signing certificate - never commit
+*.pfx
+*.cer

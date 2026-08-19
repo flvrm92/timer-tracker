@@ -1,5 +1,4 @@
 jest.mock('../src/main/ipcHandlers', () => jest.fn());
-jest.mock('electron-squirrel-startup', () => false);
 
 jest.mock('electron', () => {
   const mockWin = {
@@ -143,25 +142,72 @@ describe('main/index: window-all-closed handler', () => {
   });
 });
 
-describe('main/index: Squirrel startup guard', () => {
-  // Reset module registry before each test so index.js re-executes with fresh mocks.
-  beforeEach(() => { jest.resetModules(); });
+describe('main/index: legacy database import', () => {
+  const fs = require('node:fs');
+  const os = require('node:os');
+  const path = require('node:path');
+  const { importLegacyDatabase } = require('../src/main/index');
 
-  test('calls app.quit immediately when electron-squirrel-startup returns true', () => {
-    jest.doMock('electron-squirrel-startup', () => true);
-    jest.doMock('../src/main/ipcHandlers', () => jest.fn());
-    const { app } = require('electron');
-    app.quit.mockClear();
-    require('../src/main/index');
-    expect(app.quit).toHaveBeenCalled();
+  const legacyPath = path.join('/mock/home', 'AppData', 'Roaming', 'time-tracker', 'timers.db');
+  const target = path.join('/mock/userData', 'timers.db');
+
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.spyOn(os, 'homedir').mockReturnValue('/mock/home');
   });
 
-  test('does not call app.quit during normal startup when no Squirrel event', () => {
-    jest.doMock('electron-squirrel-startup', () => false);
-    jest.doMock('../src/main/ipcHandlers', () => jest.fn());
-    const { app } = require('electron');
-    app.quit.mockClear();
-    require('../src/main/index');
-    expect(app.quit).not.toHaveBeenCalled();
+  afterAll(() => jest.restoreAllMocks());
+
+  test('copies the legacy database when the target does not exist', () => {
+    jest.spyOn(fs, 'existsSync').mockImplementation((p) => p === legacyPath);
+    jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+    const copy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    expect(importLegacyDatabase(target)).toBe(true);
+    expect(copy).toHaveBeenCalledWith(legacyPath, target);
+  });
+
+  test('creates the target directory before copying', () => {
+    jest.spyOn(fs, 'existsSync').mockImplementation((p) => p === legacyPath);
+    const mkdir = jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+
+    importLegacyDatabase(target);
+    expect(mkdir).toHaveBeenCalledWith(path.dirname(target), { recursive: true });
+  });
+
+  test('is a no-op when the target already exists', () => {
+    jest.spyOn(fs, 'existsSync').mockReturnValue(true);
+    const copy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+
+    expect(importLegacyDatabase(target)).toBe(false);
+    expect(copy).not.toHaveBeenCalled();
+  });
+
+  test('is a no-op when there is no legacy database', () => {
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+    const copy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+
+    expect(importLegacyDatabase(target)).toBe(false);
+    expect(copy).not.toHaveBeenCalled();
+  });
+
+  test('does not copy a file onto itself when the target is the legacy path', () => {
+    jest.spyOn(fs, 'existsSync').mockImplementation((p) => p === legacyPath);
+    const copy = jest.spyOn(fs, 'copyFileSync').mockImplementation(() => {});
+
+    expect(importLegacyDatabase(legacyPath)).toBe(false);
+    expect(copy).not.toHaveBeenCalled();
+  });
+
+  test('swallows copy failures so startup is never blocked', () => {
+    jest.spyOn(fs, 'existsSync').mockImplementation((p) => p === legacyPath);
+    jest.spyOn(fs, 'mkdirSync').mockImplementation(() => {});
+    jest.spyOn(fs, 'copyFileSync').mockImplementation(() => { throw new Error('EACCES'); });
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+
+    expect(importLegacyDatabase(target)).toBe(false);
   });
 });

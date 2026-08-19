@@ -1,11 +1,47 @@
 const { app, BrowserWindow, Menu, Tray } = require('electron');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path')
 
-// Squirrel (Windows installer) lifecycle guard.
-// Short-circuits install/update/uninstall events before any app bootstrap fires.
-if (require('electron-squirrel-startup')) { app.quit(); }
+/**
+ * Copies a pre-MSIX database into the app's userData directory on first run.
+ *
+ * Under MSIX, app.getPath('userData') resolves inside the package container
+ * (%LOCALAPPDATA%\Packages\<PackageFamilyName>\LocalCache\Roaming\time-tracker)
+ * rather than %APPDATA%\time-tracker, so a database written by an earlier
+ * unpackaged build is not reliably visible to the packaged app.
+ *
+ * The legacy path is resolved from os.homedir() rather than %APPDATA%, because
+ * that environment variable is itself subject to MSIX redirection.
+ *
+ * Only ever copies when the destination is absent, so it is idempotent and a
+ * no-op once the app has its own database - including the case where MSIX
+ * redirection already exposed the old file. Never throws: a failed import must
+ * degrade to an empty database, not block startup.
+ *
+ * @param {string} target Absolute path the app will open its database at.
+ * @returns {boolean} true if a legacy database was imported on this call.
+ */
+function importLegacyDatabase(target) {
+  try {
+    if (fs.existsSync(target)) return false;
 
-process.env.DB_PATH = path.join(app.getPath('userData'), 'timers.db');
+    const legacy = path.join(os.homedir(), 'AppData', 'Roaming', 'time-tracker', 'timers.db');
+    if (legacy === target || !fs.existsSync(legacy)) return false;
+
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.copyFileSync(legacy, target);
+    console.log(`Imported legacy database from ${legacy}`);
+    return true;
+  } catch (err) {
+    console.error('Could not import legacy database:', err.message);
+    return false;
+  }
+}
+
+const dbPath = path.join(app.getPath('userData'), 'timers.db');
+importLegacyDatabase(dbPath);
+process.env.DB_PATH = dbPath;
 
 const createWindow = () => {
   const win = new BrowserWindow({
@@ -96,14 +132,19 @@ const createWindow = () => {
             }
           ]
         },
-        { type: 'separator' },
-        {
-          label: 'Toggle DevTools',
-          accelerator: 'Ctrl+Shift+I',
-          click: () => {
-            win.webContents.toggleDevTools()
+        // DevTools is a development affordance only. Spreading keeps the rest
+        // of the View menu - and the Projects/Timers navigation - intact in
+        // packaged builds, which is the only way to move between pages.
+        ...(app.isPackaged ? [] : [
+          { type: 'separator' },
+          {
+            label: 'Toggle DevTools',
+            accelerator: 'Ctrl+Shift+I',
+            click: () => {
+              win.webContents.toggleDevTools()
+            }
           }
-        }
+        ])
       ]
     },
     {
@@ -129,7 +170,5 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-if (app.isPackaged) {
-  Menu.setApplicationMenu(null);
-}
+module.exports = { importLegacyDatabase };
 

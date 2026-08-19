@@ -1,0 +1,10 @@
+{
+  "//": "MSIX package identity. Before submitting to the Microsoft Store, replace identityName, publisher and publisherDisplayName with the EXACT strings from Partner Center > your app > Product management > Product identity. They are case- and punctuation-sensitive; a mismatch is the most common cause of package upload rejection. The defaults below are only good enough for local sideload testing with a self-signed certificate (see scripts/sign-local.ps1).",
+
+  "identityName": "FlavioMoreno.TimerTracker",
+  "publisher": "CN=Flavio Moreno",
+  "publisherDisplayName": "Flavio Moreno",
+
+  "displayName": "Timer Tracker",
+  "description": "Track time per project and export billable hours to CSV."
+}

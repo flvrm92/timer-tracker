@@ -1,20 +1,22 @@
 {
   "name": "time-tracker",
   "version": "1.0.0",
-  "description": "time tracker electron app",
+  "description": "Track time per project and export billable hours to CSV.",
   "main": "src/main/index.js",
   "scripts": {
     "test": "jest --runInBand",
     "test:watch": "jest --watchAll",
+    "generate-icons": "node scripts/generate-icons.js",
     "start": "electron-forge start",
+    "prepackage": "npm run generate-icons",
     "package": "electron-forge package",
-    "make": "electron-forge make"
+    "make:msix": "npm run generate-icons && electron-forge make --targets @electron-forge/maker-msix"
   },
   "author": "flvrm92",
   "license": "ISC",
   "devDependencies": {
     "@electron-forge/cli": "^7.11.1",
-    "@electron-forge/maker-squirrel": "^7.11.1",
+    "@electron-forge/maker-msix": "^7.11.2",
     "@electron-forge/plugin-auto-unpack-natives": "^7.11.1",
     "@electron-forge/plugin-fuses": "^7.11.1",
     "@electron/fuses": "^1.8.0",
@@ -22,10 +24,11 @@
     "electron": "41.0.2",
     "electron-reload": "^2.0.0-alpha.1",
     "electron-reloader": "^1.2.3",
-    "jest": "^29.7.0"
+    "jest": "^29.7.0",
+    "png-to-ico": "^3.0.2",
+    "sharp": "^0.35.3"
   },
   "dependencies": {
-    "electron-squirrel-startup": "^1.0.1",
     "sqlite3": "6.0.1"
   },
   "overrides": {
