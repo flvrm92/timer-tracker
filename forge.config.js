@@ -66,6 +66,50 @@ function writeManifest() {
 
 const version = writeManifest();
 
+/**
+ * Picks which Windows SDK build the MSIX maker should take makeappx/makepri/
+ * signtool from.
+ *
+ * This has to be set explicitly. Left unset, electron-windows-msix derives the
+ * SDK version from the manifest's TargetDeviceFamily MinVersion - which is
+ * 10.0.17763.0, the oldest Windows we support, not an SDK anybody installs -
+ * and then fails hard instead of falling back to an installed one.
+ *
+ * Resolving it from disk keeps the build working across machines with different
+ * SDKs. Override with WINDOWS_KIT_VERSION when a specific build is needed.
+ *
+ * @returns {string|undefined} SDK version folder name, or undefined if none is
+ *   installed, in which case the maker reports the missing tooling itself.
+ */
+function resolveWindowsKitVersion() {
+  if (process.env.WINDOWS_KIT_VERSION) return process.env.WINDOWS_KIT_VERSION;
+
+  const binRoot = 'C:\\Program Files (x86)\\Windows Kits\\10\\bin';
+  if (!fs.existsSync(binRoot)) return undefined;
+
+  const arch = process.env.PROCESSOR_ARCHITECTURE === 'ARM64' ? 'arm64' : 'x64';
+
+  // Newest first, comparing the four numeric sections rather than as strings so
+  // 10.0.9 does not sort above 10.0.26100.
+  const rank = (name) => name.split('.').map(Number);
+  const newestFirst = (a, b) => {
+    const [ra, rb] = [rank(a), rank(b)];
+    for (let i = 0; i < 4; i++) {
+      if (ra[i] !== rb[i]) return rb[i] - ra[i];
+    }
+    return 0;
+  };
+
+  return fs
+    .readdirSync(binRoot)
+    .filter((name) => /^10(\.\d+){3}$/.test(name))
+    .filter((name) => fs.existsSync(path.join(binRoot, name, arch, 'makeappx.exe')))
+    .sort(newestFirst)[0];
+}
+
+const windowsKitVersion = resolveWindowsKitVersion();
+console.log(`[msix] windows sdk: ${windowsKitVersion || 'NOT FOUND - install the Windows SDK'}`);
+
 module.exports = {
   packagerConfig: {
     asar: true,
@@ -103,7 +147,8 @@ module.exports = {
       config: {
         appManifest: MANIFEST,
         packageAssets: path.join(PACKAGING, 'assets'),
-        packageName: `timer-tracker-${version}`,
+        packageName: `timer-tracker-${pkg.version}`,
+        windowsKitVersion,
         createPri: true,
         // The Store re-signs submitted MSIX packages with a Microsoft
         // certificate, so the artifact we upload must not be signed here. For
