@@ -359,19 +359,21 @@ Item 10: validates the Squirrel installer flow (shortcut creation, per-user inst
 
 These items are not required for the current Squirrel lane but must be resolved before any Store submission.
 
-| ID | Item | Current State | Status |
-|----|------|--------------|--------|
-| MS-1 | MSIX maker (`@electron-forge/maker-appx`) | Not in forge.config.js | **DEFERRED** |
-| MS-2 | Publisher identity for MSIX manifest | No `publisher` field; no EV cert | **DEFERRED** |
-| MS-3 | Four-part Store version (`1.0.0.0`) | `version: 1.0.0` (three-part) | **DEFERRED** |
-| MS-4 | `electron-squirrel-startup` removal/guarding | Wired in Squirrel lane (Phase 05 T4); remove before MSIX lane | **DEFERRED** |
-| MS-5 | `userData` path migration strategy | Currently `time-tracker`; Store identity may differ | **DEFERRED** |
-| MS-6 | Auto-update strategy segmentation (Squirrel vs. Store) | No `remoteReleases`/update URL configured | **DEFERRED** |
-| MS-7 | Store listing metadata (description, screenshots, category) | Not documented | **DEFERRED** |
-| MS-8 | Privacy policy and permissions documentation | Not documented | **DEFERRED** |
-| MS-9 | MSIX-compatible icon set (multiple sizes, `.png` assets) | No icon assets in project | **DEFERRED** (overlaps OPEN 2.3) |
+| ID | Item | Resolution | Status |
+|----|------|-----------|--------|
+| MS-1 | MSIX maker | `@electron-forge/maker-msix` 7.11.2 (`maker-appx` is deprecated upstream; the winapp-CLI route was the alternative considered) | **DONE** |
+| MS-2 | Publisher identity for MSIX manifest | `packaging/identity.json` is the single source; substituted into the manifest at build time. No certificate needed — the Store re-signs submitted MSIX packages with a Microsoft certificate | **DONE** (real Partner Center values still to be filled in) |
+| MS-3 | Four-part Store version (`1.0.0.0`) | `forge.config.js` `storeVersion()` widens `package.json` semver; rejects a leading 0 | **DONE** |
+| MS-4 | `electron-squirrel-startup` removal | Dependency and its require removed along with `maker-squirrel` | **DONE** |
+| MS-5 | `userData` path migration strategy | `importLegacyDatabase()` in `src/main/index.js` copies a pre-MSIX `%APPDATA%\time-tracker\timers.db` on first run. Idempotent, non-fatal, covered by 6 tests. `packagerConfig.name` deliberately unset so `app.getName()` stays `time-tracker` | **DONE** |
+| MS-6 | Auto-update strategy | Store-only lane. Squirrel dropped; the Store update pipeline delivers new versions and the app carries no self-update code | **DONE** |
+| MS-7 | Store listing metadata | Category, age rating, screenshots and submission fields documented in the Releasing section of README.md | **DONE** (submission itself pending a Partner Center account) |
+| MS-8 | Privacy policy and permissions | `runFullTrust` is the only declared capability. App is fully local: no network calls, no telemetry. A privacy-policy URL is still required by Partner Center | **PARTIAL** — URL to be published |
+| MS-9 | MSIX-compatible icon set | `packaging/icon.svg` + `scripts/generate-icons.js` produce all 12 visual assets and a multi-resolution `icon.ico` | **DONE** |
 
-**Current Squirrel lane is not blocked by any DEFERRED item.**
+**Remaining Store blockers:** the Windows SDK must be installed to run `makeappx` (`winget install --id Microsoft.WindowsSDK.10.0.26100`, needs elevation); a Partner Center account and reserved app name are needed to fill in `packaging/identity.json`; the packaged-GUI smoke test (Section 5) is still unperformed; and a privacy-policy URL must be published.
+
+> **Update (2026-08-18):** The Squirrel lane has been retired. Distribution is now Microsoft Store / MSIX only. See the Releasing section of README.md.
 
 ---
 
