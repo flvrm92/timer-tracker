@@ -265,6 +265,11 @@ self-update code.
    cause of package upload rejection. The values committed in the repo are
    sideload-only placeholders.
 
+4. **Publish the privacy policy.** Partner Center requires a reachable URL.
+   [`PRIVACY.md`](PRIVACY.md) is ready to use — once the repo is public, its
+   GitHub URL works:
+   `https://github.com/flvrm92/timer-tracker/blob/main/PRIVACY.md`
+
 ### Cutting a release
 
 1. Bump `version` in `package.json` (e.g. `1.0.0` → `1.0.1`).

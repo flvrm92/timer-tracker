@@ -368,10 +368,10 @@ These items are not required for the current Squirrel lane but must be resolved 
 | MS-5 | `userData` path migration strategy | `importLegacyDatabase()` in `src/main/index.js` copies a pre-MSIX `%APPDATA%\time-tracker\timers.db` on first run. Idempotent, non-fatal, covered by 6 tests. `packagerConfig.name` deliberately unset so `app.getName()` stays `time-tracker` | **DONE** |
 | MS-6 | Auto-update strategy | Store-only lane. Squirrel dropped; the Store update pipeline delivers new versions and the app carries no self-update code | **DONE** |
 | MS-7 | Store listing metadata | Category, age rating, screenshots and submission fields documented in the Releasing section of README.md | **DONE** (submission itself pending a Partner Center account) |
-| MS-8 | Privacy policy and permissions | `runFullTrust` is the only declared capability. App is fully local: no network calls, no telemetry. A privacy-policy URL is still required by Partner Center | **PARTIAL** — URL to be published |
+| MS-8 | Privacy policy and permissions | `runFullTrust` is the only declared capability. App is fully local: no network calls, no telemetry (verified by grep across `src/`). Policy written to `PRIVACY.md` | **DONE** (URL live once the repo is public) |
 | MS-9 | MSIX-compatible icon set | `packaging/icon.svg` + `scripts/generate-icons.js` produce all 12 visual assets and a multi-resolution `icon.ico` | **DONE** |
 
-**Remaining Store blockers:** the Windows SDK must be installed to run `makeappx` (`winget install --id Microsoft.WindowsSDK.10.0.26100`, needs elevation); a Partner Center account and reserved app name are needed to fill in `packaging/identity.json`; the packaged-GUI smoke test (Section 5) is still unperformed; and a privacy-policy URL must be published.
+**Remaining Store blockers:** the Windows SDK must be installed to run `makeappx` (`winget install --id Microsoft.WindowsSDK.10.0.26100`, needs elevation); a Partner Center account and reserved app name are needed to fill in `packaging/identity.json`; the packaged-GUI smoke test (Section 5) is still unperformed; and `PRIVACY.md` needs a public URL (the repo must be public, or the policy hosted elsewhere).
 
 > **Update (2026-08-18):** The Squirrel lane has been retired. Distribution is now Microsoft Store / MSIX only. See the Releasing section of README.md.
 
