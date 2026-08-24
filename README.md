@@ -253,17 +253,38 @@ self-update code.
    one-time $19 fee.
 
 3. **Reserve the app name**, then open *Product management → Product identity*
-   and copy the three values into `packaging/identity.json`:
+   and copy the three values into a new `packaging/identity.local.json`:
 
-   | Partner Center field | `packaging/identity.json` key |
+   ```json
+   {
+     "identityName": "<Package/Identity/Name>",
+     "publisher": "<Package/Identity/Publisher>",
+     "publisherDisplayName": "<Package/Properties/PublisherDisplayName>"
+   }
+   ```
+
+   | Partner Center field | `packaging/identity.local.json` key |
    |---|---|
    | Package/Identity/Name | `identityName` |
    | Package/Identity/Publisher | `publisher` |
    | Package/Properties/PublisherDisplayName | `publisherDisplayName` |
 
    These are case- and punctuation-sensitive. A mismatch is the most common
-   cause of package upload rejection. The values committed in the repo are
-   sideload-only placeholders.
+   cause of package upload rejection.
+
+   `identity.local.json` is gitignored and overrides the tracked
+   `packaging/identity.json`, which holds sideload-only placeholders — so your
+   real publisher identity never gets committed. Both `forge.config.js` and
+   `scripts/sign-local.ps1` read the override, and every build prints the
+   identity it used:
+
+   ```
+   [msix] identity: packaging/identity.local.json overrides applied
+   [msix] manifest: <identityName> / <publisher> / 1.0.0.0
+   ```
+
+   Check that line before uploading — if it shows the placeholder values, the
+   override was not picked up.
 
 4. **Publish the privacy policy.** Partner Center requires a reachable URL.
    [`PRIVACY.md`](PRIVACY.md) is ready to use — once the repo is public, its
@@ -291,7 +312,10 @@ duplicates, and a user on a higher version will never receive a lower one.
 
 The submitted artifact is intentionally unsigned, but Windows will not install
 an unsigned MSIX. `scripts/sign-local.ps1` signs a *separate copy* with a
-self-signed certificate, leaving the Store artifact untouched:
+self-signed certificate, leaving the Store artifact untouched. The certificate
+lives in `Cert:CurrentUserMy` and is reused across runs; its private key is
+exported to a temp file only for the duration of the run and deleted afterwards,
+so no key material is ever left in the repo:
 
 ```powershell
 npm run make:msix

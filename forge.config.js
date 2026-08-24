@@ -4,11 +4,32 @@ const { FusesPlugin } = require('@electron-forge/plugin-fuses');
 const { FuseV1Options, FuseVersion } = require('@electron/fuses');
 
 const pkg = require('./package.json');
-const identity = require('./packaging/identity.json');
 
 const PACKAGING = path.join(__dirname, 'packaging');
 const MANIFEST_TEMPLATE = path.join(PACKAGING, 'Package.appxmanifest.template');
 const MANIFEST = path.join(PACKAGING, 'Package.appxmanifest');
+
+/**
+ * Resolves the MSIX package identity.
+ *
+ * packaging/identity.json is committed and holds sideload-only placeholders.
+ * The real Partner Center values are case- and punctuation-sensitive and should
+ * never be committed, so they go in packaging/identity.local.json - which is
+ * gitignored - and override the tracked defaults key by key.
+ *
+ * @returns {object} the tracked identity, with any local overrides applied
+ */
+function resolveIdentity() {
+  const tracked = require('./packaging/identity.json');
+  const localPath = path.join(PACKAGING, 'identity.local.json');
+  if (!fs.existsSync(localPath)) return tracked;
+
+  const local = JSON.parse(fs.readFileSync(localPath, 'utf8'));
+  console.log('[msix] identity: packaging/identity.local.json overrides applied');
+  return { ...tracked, ...local };
+}
+
+const identity = resolveIdentity();
 
 /**
  * Widens package.json's three-part semver to the four-part version the Store
@@ -31,7 +52,7 @@ function storeVersion(semver) {
 
 /**
  * Renders packaging/Package.appxmanifest from the template plus
- * packaging/identity.json and the package.json version. Runs at config load,
+ * the resolved packaging identity and the package.json version. Runs at config load,
  * so every `electron-forge` invocation packages a manifest that matches the
  * current version - there is no separate step to forget.
  */
@@ -48,7 +69,7 @@ function writeManifest() {
 
   let manifest = fs.readFileSync(MANIFEST_TEMPLATE, 'utf8');
   for (const [key, value] of Object.entries(substitutions)) {
-    if (!value) throw new Error(`packaging/identity.json is missing a value for ${key}`);
+    if (!value) throw new Error(`packaging identity is missing a value for ${key}`);
     manifest = manifest.replaceAll(`{{${key}}}`, value);
   }
 

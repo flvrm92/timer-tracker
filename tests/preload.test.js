@@ -38,16 +38,16 @@ describe('preload: ipcRenderer API shape', () => {
 
   test('send delegates to ipcRenderer.send', () => {
     const api = getExposed('ipcRenderer');
-    api.send('ch', 42);
-    expect(ipcRenderer.send).toHaveBeenCalledWith('ch', 42);
+    api.send('get-timers', 42);
+    expect(ipcRenderer.send).toHaveBeenCalledWith('get-timers', 42);
   });
 
   test('on wraps ipcRenderer.on and strips event arg from callback', () => {
     const api = getExposed('ipcRenderer');
     const cb = jest.fn();
-    api.on('my-channel', cb);
-    expect(ipcRenderer.on).toHaveBeenCalledWith('my-channel', expect.any(Function));
-    const wrapped = ipcRenderer.on.mock.calls.find(c => c[0] === 'my-channel')[1];
+    api.on('timers', cb);
+    expect(ipcRenderer.on).toHaveBeenCalledWith('timers', expect.any(Function));
+    const wrapped = ipcRenderer.on.mock.calls.find(c => c[0] === 'timers')[1];
     wrapped({} /* event */, 'payload');
     expect(cb).toHaveBeenCalledWith('payload');
   });
@@ -88,5 +88,53 @@ describe('preload: darkMode API shape', () => {
     const api = getExposed('darkMode');
     api.getTheme();
     expect(ipcRenderer.invoke).toHaveBeenCalledWith('dark-mode:get');
+  });
+});
+
+describe('preload: IPC channel allowlist', () => {
+  const SEND_CHANNELS = [
+    'add-project', 'delete-project', 'get-projects', 'save-timer',
+    'get-timers', 'update-timer', 'delete-timer', 'export-csv',
+  ];
+  const RECEIVE_CHANNELS = [
+    'projects', 'project-added', 'project-deleted', 'timers', 'timers-error',
+    'timer-updated', 'timer-update-error', 'timer-deleted', 'timer-delete-error',
+    'csv-exported', 'csv-export-error', 'csv-export-cancelled',
+  ];
+
+  test.each(SEND_CHANNELS)('send allows %s', (channel) => {
+    const api = getExposed('ipcRenderer');
+    expect(() => api.send(channel, null)).not.toThrow();
+    expect(ipcRenderer.send).toHaveBeenCalledWith(channel, null);
+  });
+
+  test.each(RECEIVE_CHANNELS)('on allows %s', (channel) => {
+    const api = getExposed('ipcRenderer');
+    expect(() => api.on(channel, jest.fn())).not.toThrow();
+  });
+
+  test('send rejects an unregistered channel', () => {
+    const api = getExposed('ipcRenderer');
+    ipcRenderer.send.mockClear();
+    expect(() => api.send('rm-rf', 'payload')).toThrow(/unregistered channel "rm-rf"/);
+    expect(ipcRenderer.send).not.toHaveBeenCalled();
+  });
+
+  test('on rejects an unregistered channel', () => {
+    const api = getExposed('ipcRenderer');
+    ipcRenderer.on.mockClear();
+    expect(() => api.on('rm-rf', jest.fn())).toThrow(/unregistered channel "rm-rf"/);
+    expect(ipcRenderer.on).not.toHaveBeenCalled();
+  });
+
+  test('send and receive lists are separate', () => {
+    const api = getExposed('ipcRenderer');
+    expect(() => api.send('timers', null)).toThrow(/unregistered channel/);
+    expect(() => api.on('delete-project', jest.fn())).toThrow(/unregistered channel/);
+  });
+
+  test('dark-mode channels are not reachable through the generic bridge', () => {
+    const api = getExposed('ipcRenderer');
+    expect(() => api.send('dark-mode:set', 'dark')).toThrow(/unregistered channel/);
   });
 });

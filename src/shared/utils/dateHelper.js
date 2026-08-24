@@ -46,10 +46,14 @@ function localInputToIso(val) {
   return d.toISOString();
 }
 
-module.exports = {
-  formatDate,
-  formatTime,
-  formatDuration,
-  isoToLocalInput,
-  localInputToIso
+// Loaded both as a <script src> in the renderer - where `module` does not exist -
+// and via require() in tests, so the export has to be guarded.
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    formatDate,
+    formatTime,
+    formatDuration,
+    isoToLocalInput,
+    localInputToIso
+  };
 }
