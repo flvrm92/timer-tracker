@@ -27,37 +27,42 @@ function loadProjects() {
   window.ipcRenderer.send('get-projects');
 }
 
-function createDeleteButton(projectId, projectName) {
-  if (window.IconUtils) {
-    const deleteIcon = window.IconUtils.createIcon('delete', {
-      size: 'sm',
-      title: `Delete ${projectName}`,
-      ariaLabel: `Delete ${projectName}`
-    });
+/**
+ * Builds the delete button for a project row as a DOM element.
+ *
+ * This deliberately returns an element rather than an HTML string: the previous
+ * version emitted an inline `onclick="deleteProject(1, 'name')"` attribute with
+ * only single quotes escaped, so a project name containing a double quote or an
+ * angle bracket broke out of the attribute. Attaching the handler here also
+ * lets the CSP drop `script-src 'unsafe-inline'` entirely.
+ *
+ * @param {{id: number, name: string}} project
+ * @returns {HTMLButtonElement}
+ */
+function createDeleteButton(project) {
+  const label = `Delete ${project.name}`;
+  const onClick = () => deleteProject(project.id, project.name);
 
-    return `
-      <button 
-        class="btn btn-sm btn-danger btn-icon tooltip" 
-        onclick="deleteProject(${projectId}, '${projectName.replace(/'/g, "\\'")}')"
-        title="Delete ${projectName}"
-        aria-label="Delete ${projectName}"
-      >
-        ${deleteIcon}
-        <span class="tooltip-text">Delete Project</span>
-      </button>
-    `;
+  if (window.IconUtils) {
+    const button = window.IconUtils.createIconButton('delete', {
+      variant: 'danger',
+      size: 'sm',
+      title: label,
+      ariaLabel: label,
+      onClick
+    });
+    window.IconUtils.addTooltip(button, 'Delete Project');
+    return button;
   }
 
-  // Fallback if icons aren't loaded
-  return `
-    <button 
-      class="btn btn-sm btn-danger" 
-      onclick="deleteProject(${projectId}, '${projectName.replace(/'/g, "\\'")}')"
-      title="Delete ${projectName}"
-    >
-      Delete
-    </button>
-  `;
+  // Fallback if icons aren't loaded.
+  const button = document.createElement('button');
+  button.className = 'btn btn-sm btn-danger';
+  button.textContent = 'Delete';
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.addEventListener('click', onClick);
+  return button;
 }
 
 function populateProjects(projects) {
@@ -85,15 +90,17 @@ function populateProjects(projects) {
       ? `R$ ${parseFloat(project.hourly_rate).toFixed(2)}`
       : '';
 
+    // project.name is user-supplied and goes through innerHTML, so it has to be
+    // escaped. The delete button is appended as a node so it carries no inline
+    // onclick attribute.
     row.innerHTML = `
       <td>${project.id}</td>
-      <td><strong>${project.name}</strong></td>
+      <td><strong>${escapeHtml(project.name)}</strong></td>
       <td style="text-align: center;">${billableStatus}</td>
       <td style="text-align: right;">${hourlyRate}</td>
-      <td class="actions">
-        ${createDeleteButton(project.id, project.name)}
-      </td>
+      <td class="actions"></td>
     `;
+    row.querySelector('.actions').appendChild(createDeleteButton(project));
     projectsList.appendChild(row);
   });
 }

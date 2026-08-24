@@ -60,9 +60,9 @@ function computeDuration(startIso, endIso) {
 function createActionButtons() {
   if (!window.IconUtils) {
     return `
-      <button onclick="handleSaveClick(event)" class="btn btn-sm btn-success save-btn" disabled title="Save Changes">Save</button>
-      <button onclick="handleCancelClick(event)" class="btn btn-sm btn-secondary cancel-btn" disabled title="Cancel Changes">Cancel</button>
-      <button onclick="handleDeleteClick(event)" class="btn btn-sm btn-danger delete-btn" title="Delete Timer">Delete</button>
+      <button class="btn btn-sm btn-success save-btn" disabled title="Save Changes">Save</button>
+      <button class="btn btn-sm btn-secondary cancel-btn" disabled title="Cancel Changes">Cancel</button>
+      <button class="btn btn-sm btn-danger delete-btn" title="Delete Timer">Delete</button>
     `;
   }
 
@@ -85,20 +85,43 @@ function createActionButtons() {
   });
 
   return `
-    <button onclick="handleSaveClick(event)" class="btn btn-sm btn-success btn-icon save-btn tooltip" disabled title="Save Changes" aria-label="Save Changes">
+    <button class="btn btn-sm btn-success btn-icon save-btn tooltip" disabled title="Save Changes" aria-label="Save Changes">
       ${saveIcon}
       <span class="tooltip-text">Save Changes</span>
     </button>
-    <button onclick="handleCancelClick(event)" class="btn btn-sm btn-secondary btn-icon cancel-btn tooltip" disabled title="Cancel Changes" aria-label="Cancel Changes">
+    <button class="btn btn-sm btn-secondary btn-icon cancel-btn tooltip" disabled title="Cancel Changes" aria-label="Cancel Changes">
       ${cancelIcon}
       <span class="tooltip-text">Cancel Changes</span>
     </button>
-    <button onclick="handleDeleteClick(event)" class="btn btn-sm btn-danger btn-icon delete-btn tooltip" title="Delete Timer" aria-label="Delete Timer">
+    <button class="btn btn-sm btn-danger btn-icon delete-btn tooltip" title="Delete Timer" aria-label="Delete Timer">
       ${deleteIcon}
       <span class="tooltip-text">Delete Timer</span>
     </button>
   `;
 }
+
+// Row action buttons are rendered as HTML strings, so their handlers are bound
+// here by delegation rather than with inline onclick attributes - inline
+// handlers are script under the CSP, and dropping them is what lets
+// script-src forbid 'unsafe-inline'. Clicks on a disabled button do not fire,
+// so the save/cancel disabled state still holds.
+const ROW_ACTIONS = {
+  'save-btn': (event) => handleSaveClick(event),
+  'cancel-btn': (event) => handleCancelClick(event),
+  'delete-btn': (event) => handleDeleteClick(event),
+};
+
+bodyEl.addEventListener('click', (event) => {
+  const button = event.target.closest('button');
+  if (!button || !bodyEl.contains(button)) return;
+
+  for (const [className, handler] of Object.entries(ROW_ACTIONS)) {
+    if (button.classList.contains(className)) {
+      handler(event);
+      return;
+    }
+  }
+});
 
 function handleSaveClick(event) {
   const tr = event.target.closest('tr');
@@ -149,8 +172,8 @@ function renderRows(rows) {
 
     tr.innerHTML = `      
       <td>${row.id}</td>
-      <td>${row.project_name || ''}</td>
-      <td>${row.task_description || ''}</td>
+      <td>${escapeHtml(row.project_name)}</td>
+      <td>${escapeHtml(row.task_description)}</td>
       <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
       <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
       <td class="duration-cell">${formatDuration(row.duration)}</td>
@@ -361,7 +384,7 @@ window.ipcRenderer.on('csv-export-cancelled', () => {
 });
 
 window.ipcRenderer.on('timers-error', (message) => {
-  bodyEl.innerHTML = `<tr><td colspan="7">Error: ${message}</td></tr>`;
+  bodyEl.innerHTML = `<tr><td colspan="7">Error: ${escapeHtml(message)}</td></tr>`;
 });
 
 window.ipcRenderer.on('timer-update-error', ({ id, message }) => {
@@ -387,8 +410,8 @@ window.ipcRenderer.on('timer-updated', (row) => {
 
   tr.innerHTML = `
     <td>${row.id}</td>
-    <td>${row.project_name || ''}</td>
-    <td>${row.task_description || ''}</td>
+    <td>${escapeHtml(row.project_name)}</td>
+    <td>${escapeHtml(row.task_description)}</td>
     <td><input type="datetime-local" class="form-input start-input" value="${startLocal}"></td>
     <td><input type="datetime-local" class="form-input end-input" value="${endLocal}"></td>
     <td class="duration-cell">${formatDuration(row.duration)}</td>

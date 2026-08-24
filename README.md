@@ -11,7 +11,7 @@ A simple and efficient desktop time tracking application built with Electron and
 - **🔍 Advanced Filtering**: Filter timers by project and date range
 - **📤 CSV Export**: Export filtered timer data to CSV files
 - **🌙 Theme Support**: Light, dark, and system theme options
-- **✅ Comprehensive Testing**: Full test coverage with Jest
+- **✅ Automated Tests**: Jest test suite — 86 tests across 5 suites; ~82% statement coverage (preload and IPC handlers near full; dateHelper and main index partially covered)
 - **💲 Billable Projects**: Mark projects as billable with an hourly rate; timers automatically calculate amount earned
 - **🗃️ Database Migrations**: Automatic schema migration & version tracking (schema_version table)
 
@@ -36,7 +36,7 @@ A simple and efficient desktop time tracking application built with Electron and
 ## Installation
 
 ### Prerequisites
-- Node.js (v18 or higher recommended; Electron 33 targets recent Node APIs)
+- Node.js (v20 or higher recommended; Electron 41 bundles Node 22 internally; sqlite3 6.x requires native compilation via node-gyp which works reliably on Node 20+)
 - npm (comes with Node)
 
 ### Setup
@@ -51,7 +51,7 @@ A simple and efficient desktop time tracking application built with Electron and
    npm install
    ```
 
-3. Start the application (development with hot reload):
+3. Start the application in development mode:
    ```bash
    npm start
    ```
@@ -61,10 +61,12 @@ A simple and efficient desktop time tracking application built with Electron and
    npm test
    ```
 
-5. Create distributable packages (uses Electron Forge makers):
+5. Build the distributable MSIX package:
    ```bash
-   npm run make
+   npm run make:msix
    ```
+
+   > **Packaging lane:** Windows only, MSIX for the Microsoft Store. Produces `timer-tracker-<version>.msix` under `out/make/msix/x64/`. Requires the Windows SDK — see [Releasing](#releasing).
 
 ## Usage
 
@@ -90,11 +92,11 @@ Change themes via the View menu:
 Follow this typical development session flow:
 
 1. Install deps (first time only): `npm install`
-2. Launch in dev mode (auto-reload main & renderer): `npm start`
+2. Launch in dev mode: `npm start`
 3. Open DevTools if needed via menu: View → Toggle DevTools (or Ctrl+Shift+I)
 4. Run tests while coding: `npm test` (one-off) or `npm run test:watch`
 5. Inspect code coverage in `coverage/` after tests
-6. Package the app for distribution: `npm run make`
+6. Package the app for distribution: `npm run make:msix`
 
 ### Database Location
 The SQLite database file is created automatically at runtime. Its path is set internally via:
@@ -106,11 +108,16 @@ On Windows this typically resolves to:
 
 To use a different database during development or tests you can set `DB_PATH` before launching (tests already do this).
 
+When installed from the Microsoft Store, MSIX redirects `userData` into the package container:
+`C:\Users\<USER>\AppData\Local\Packages\<PackageFamilyName>\LocalCache\Roaming\time-tracker\timers.db`
+
+On first launch the app imports an existing `%APPDATA%\time-tracker\timers.db` into that location if it has no database of its own, so data created by an unpackaged build carries over. The import runs once and never overwrites an existing database.
+
 ### Environment Variables
 | Variable | Purpose | Default / How Set |
 |----------|---------|-------------------|
 | DB_PATH  | SQLite database file path | Auto-set in `src/main/index.js` to userData/timers.db |
-| NODE_ENV | Controls dev tools & hot reload | Usually `development` when running `npm start` |
+| NODE_ENV | Not used for dev-tools gating | DevTools and the reloader key off `app.isPackaged` instead |
 
 ## Architecture
 
@@ -119,7 +126,6 @@ To use a different database during development or tests you can set `DB_PATH` be
 - **Backend**: Electron (Node.js)
 - **Database**: SQLite3
 - **Testing**: Jest
-- **Hot Reload**: electron-reloader (development)
 
 ### Project Structure
 ```
@@ -192,7 +198,7 @@ Test coverage is automatically generated and includes:
 View coverage reports in the `coverage/` directory after running tests.
 
 ### Development Mode
-The application includes hot reload functionality when running in development mode:
+Run the application in development mode. DevTools are available via View → Toggle DevTools (or Ctrl+Shift+I). No hot-reload package is active; restart `npm start` to pick up main-process changes:
 ```bash
 npm start
 ```
@@ -222,6 +228,118 @@ npm start
 - Automatic filename generation with timestamps (includes project name if filtered)
 - Includes billable metadata (Hourly Rate, Amount Earned) when applicable
 - Supports all projects or a single project
+- Files are saved as **UTF-8 with BOM** for correct display in Excel and Windows tools
+- Date columns (Start Time, End Time) use the local UI-aligned format: **dd/mm/yyyy HH:MM:SS**
+- Billable numeric fields (Hourly Rate, Amount Earned) export as plain decimal values (e.g. `50.00`), not currency text
+
+## Releasing
+
+Timer Tracker is distributed through the **Microsoft Store** as an MSIX package.
+The Store handles both signing and updates: it re-signs every submitted package
+with a Microsoft certificate, so **no code-signing certificate is required**, and
+it pushes new versions to installed users automatically. The app contains no
+self-update code.
+
+### One-time setup
+
+1. **Install the Windows SDK** — provides `makeappx`, `makepri`, `signtool` and
+   the Windows App Certification Kit. MSIX can only be built on Windows.
+   ```powershell
+   winget install --id Microsoft.WindowsSDK.10.0.26100
+   ```
+
+2. **Create a Microsoft Partner Center account** at
+   <https://partner.microsoft.com/dashboard>. An Individual account is a
+   one-time $19 fee.
+
+3. **Reserve the app name**, then open *Product management → Product identity*
+   and copy the three values into a new `packaging/identity.local.json`:
+
+   ```json
+   {
+     "identityName": "<Package/Identity/Name>",
+     "publisher": "<Package/Identity/Publisher>",
+     "publisherDisplayName": "<Package/Properties/PublisherDisplayName>"
+   }
+   ```
+
+   | Partner Center field | `packaging/identity.local.json` key |
+   |---|---|
+   | Package/Identity/Name | `identityName` |
+   | Package/Identity/Publisher | `publisher` |
+   | Package/Properties/PublisherDisplayName | `publisherDisplayName` |
+
+   These are case- and punctuation-sensitive. A mismatch is the most common
+   cause of package upload rejection.
+
+   `identity.local.json` is gitignored and overrides the tracked
+   `packaging/identity.json`, which holds sideload-only placeholders — so your
+   real publisher identity never gets committed. Both `forge.config.js` and
+   `scripts/sign-local.ps1` read the override, and every build prints the
+   identity it used:
+
+   ```
+   [msix] identity: packaging/identity.local.json overrides applied
+   [msix] manifest: <identityName> / <publisher> / 1.0.0.0
+   ```
+
+   Check that line before uploading — if it shows the placeholder values, the
+   override was not picked up.
+
+4. **Publish the privacy policy.** Partner Center requires a reachable URL.
+   [`PRIVACY.md`](PRIVACY.md) is ready to use — once the repo is public, its
+   GitHub URL works:
+   `https://github.com/flvrm92/timer-tracker/blob/main/PRIVACY.md`
+
+### Cutting a release
+
+1. Bump `version` in `package.json` (e.g. `1.0.0` → `1.0.1`).
+2. Build and test:
+   ```bash
+   npm test
+   npm run make:msix
+   ```
+   The package lands at `out/make/msix/x64/timer-tracker-<version>.msix`.
+3. Upload it to Partner Center → *Packages*, then submit.
+
+`forge.config.js` derives the MSIX version from `package.json` automatically,
+widening `1.0.1` to the four-part `1.0.1.0` the Store requires. The fourth
+section is reserved by the Store and must stay `0`, and the first section
+cannot be `0`. **Never reuse or lower a version number** — the Store rejects
+duplicates, and a user on a higher version will never receive a lower one.
+
+### Testing the package locally
+
+The submitted artifact is intentionally unsigned, but Windows will not install
+an unsigned MSIX. `scripts/sign-local.ps1` signs a *separate copy* with a
+self-signed certificate, leaving the Store artifact untouched. The certificate
+lives in `Cert:CurrentUserMy` and is reused across runs; its private key is
+exported to a temp file only for the duration of the run and deleted afterwards,
+so no key material is ever left in the repo:
+
+```powershell
+npm run make:msix
+# then from an elevated PowerShell:
+pwsh -File scripts/sign-local.ps1 -Install
+```
+
+Before submitting, also run the Windows App Certification Kit (`appcert.exe`,
+included with the SDK) against the package — it catches most certification
+failures before they cost a submission cycle.
+
+### Visual assets
+
+Every Windows and MSIX image is generated from the single source at
+`packaging/icon.svg`:
+
+```bash
+npm run generate-icons
+```
+
+This writes the twelve tile and logo PNGs into `packaging/assets/` and a
+multi-resolution `packaging/icon.ico` for the executable. It also runs
+automatically before packaging, so the committed art cannot drift from the
+source. To change the icon, edit `packaging/icon.svg` and re-run it.
 
 ## Contributing
 

@@ -117,10 +117,13 @@ function createIcon(iconName, options = {}) {
   // Add classes
   icon = icon.replace('class="icon"', `class="${classes}"`);
 
-  // Add title and aria-label for accessibility
+  // Add title and aria-label for accessibility. Both are escaped: callers pass
+  // user-supplied text (a project name in "Delete <name>"), the result is
+  // assigned through innerHTML in createIconButton, and an unescaped value there
+  // is a script-injection point.
   if (title || ariaLabel) {
-    const titleElement = title ? `<title>${title}</title>` : '';
-    const ariaAttribute = ariaLabel ? ` aria-label="${ariaLabel}"` : '';
+    const titleElement = title ? `<title>${escapeIconText(title)}</title>` : '';
+    const ariaAttribute = ariaLabel ? ` aria-label="${escapeIconText(ariaLabel)}"` : '';
     icon = icon.replace('<svg', `<svg${ariaAttribute}${titleElement ? '' : ' aria-hidden="true"'}`);
     icon = icon.replace('>', `>${titleElement}`);
   } else {
@@ -128,6 +131,17 @@ function createIcon(iconName, options = {}) {
   }
 
   return icon;
+}
+
+/**
+ * escapeHtml is loaded as a <script src> ahead of this file in every renderer
+ * entry point; the require() branch covers Node-based tests.
+ */
+function escapeIconText(value) {
+  if (typeof window !== 'undefined' && typeof window.escapeHtml === 'function') {
+    return window.escapeHtml(value);
+  }
+  return require('../utils/escapeHtml').escapeHtml(value);
 }
 
 // Utility function to create a button with an icon

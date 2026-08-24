@@ -6,7 +6,10 @@ process.env.DB_PATH = path.join(__dirname, 'test-timers.db');
 // Fresh DB per test run
 if (fs.existsSync(process.env.DB_PATH)) fs.unlinkSync(process.env.DB_PATH);
 
-const { insertTimer, insertProject, getTimers, countTimers, updateTimer, getTimersForExport, initializeDatabase } = require('../src/infra/database');
+const {
+  insertTimer, insertProject, updateProject, getProjects, getProjectById, deleteProject,
+  getTimers, countTimers, updateTimer, getTimersForExport, deleteTimer, initializeDatabase
+} = require('../src/infra/database');
 
 function promisifyInitializeDatabase() {
   return new Promise((resolve, reject) => {
@@ -194,5 +197,120 @@ describe('Database timer operations', () => {
     });
     expect(filteredExportTimers.length).toBe(1);
     expect(filteredExportTimers[0].project_name).toBe('Test Project');
+  });
+});
+
+describe('Database project operations', () => {
+  let billableProjId;
+
+  beforeAll(async () => {
+    const p = await new Promise((resolve, reject) => {
+      insertProject('Billable Project', true, 75.0, (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    billableProjId = p.id;
+  });
+
+  test('insertProject with billable fields returns correct data', async () => {
+    const p = await new Promise((resolve, reject) => {
+      insertProject('Another Billable', true, 100.0, (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    expect(p.name).toBe('Another Billable');
+    expect(p.is_billable).toBe(true);
+    expect(p.hourly_rate).toBe(100.0);
+  });
+
+  test('insertProject legacy string format returns correct data', async () => {
+    const p = await new Promise((resolve, reject) => {
+      insertProject('Legacy Project', (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    expect(p.name).toBe('Legacy Project');
+    expect(p.is_billable).toBe(false);
+    expect(p.hourly_rate).toBe(null);
+  });
+
+  test('getProjectById returns correct project', async () => {
+    const p = await new Promise((resolve, reject) => {
+      getProjectById(billableProjId, (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    expect(p).toBeTruthy();
+    expect(p.id).toBe(billableProjId);
+    expect(p.name).toBe('Billable Project');
+  });
+
+  test('getProjects returns all projects including the new ones', async () => {
+    const projects = await new Promise((resolve, reject) => {
+      getProjects((err, rows) => {
+        if (err) reject(err); else resolve(rows);
+      });
+    });
+    expect(Array.isArray(projects)).toBe(true);
+    expect(projects.length).toBeGreaterThanOrEqual(1);
+    const found = projects.find(p => p.id === billableProjId);
+    expect(found).toBeTruthy();
+  });
+
+  test('updateProject updates name and billable fields', async () => {
+    const updated = await new Promise((resolve, reject) => {
+      updateProject(billableProjId, 'Updated Billable', false, null, (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    expect(updated.name).toBe('Updated Billable');
+    expect(updated.is_billable).toBe(0);
+  });
+
+  test('deleteProject removes project so getProjectById returns undefined', async () => {
+    const tempProj = await new Promise((resolve, reject) => {
+      insertProject('Temp Project', (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    await new Promise((resolve, reject) => {
+      deleteProject(tempProj.id, (err) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+    const gone = await new Promise((resolve, reject) => {
+      getProjectById(tempProj.id, (err, project) => {
+        if (err) reject(err); else resolve(project);
+      });
+    });
+    expect(gone).toBeUndefined();
+  });
+});
+
+describe('Database deleteTimer operation', () => {
+  test('deleteTimer removes the record so countTimers returns zero for that project', async () => {
+    const p = await new Promise((resolve, reject) => {
+      insertProject('Delete Test Project', (err, proj) => {
+        if (err) reject(err); else resolve(proj);
+      });
+    });
+    const start = new Date().toISOString();
+    const end = new Date(Date.now() + 2000).toISOString();
+    const timerResult = await new Promise((resolve, reject) => {
+      insertTimer(p.id, start, end, 2, 'Delete Test', (err, result) => {
+        if (err) reject(err); else resolve(result);
+      });
+    });
+    await new Promise((resolve, reject) => {
+      deleteTimer(timerResult.id, (err) => {
+        if (err) reject(err); else resolve();
+      });
+    });
+    const total = await new Promise((resolve, reject) => {
+      countTimers(p.id, null, null, (err, count) => {
+        if (err) reject(err); else resolve(count);
+      });
+    });
+    expect(total).toBe(0);
   });
 });

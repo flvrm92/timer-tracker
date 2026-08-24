@@ -73,9 +73,12 @@ function generateFileName(projectName = null) {
   return `${prefix}timers_${dateStr}_${timeStr}.csv`;
 }
 
-module.exports = {
-  formatDuration,
-  escapeCSVField,
-  generateCSV,
-  generateFileName
-};
+// Guarded so this file is safe to load as a <script src> as well as via require().
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    formatDuration,
+    escapeCSVField,
+    generateCSV,
+    generateFileName
+  };
+}

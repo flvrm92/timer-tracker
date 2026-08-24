@@ -26,6 +26,7 @@ build/
 
 # User-specific files
 *.local
+.env
 *.env
 .env.local
 .env.production.local
@@ -50,3 +51,32 @@ electron-builder.yaml
 pbis/**/*
 
 coverage/**/*
+
+# Generated MSIX manifest (rendered from packaging/Package.appxmanifest.template)
+packaging/Package.appxmanifest
+
+# Signing certificates and private keys - never commit.
+# scripts/sign-local.ps1 exports to a temp path outside the repo, but a stray key
+# must not become committable just because it landed in the tree.
+*.pfx
+*.cer
+*.p12
+*.pem
+*.key
+*.snk
+
+# Packaged app bundles. out/ already covers the normal build path; these catch a
+# package copied elsewhere in the tree.
+*.msix
+*.msixbundle
+*.appx
+*.appxbundle
+*.appxupload
+
+# Real Partner Center identity. packaging/identity.json holds sideload-only
+# placeholders and stays tracked; the real values go here, and never get committed.
+packaging/identity.local.json
+
+# Internal phase reports - kept on disk, out of the repo.
+# The leading hash must be escaped or the whole line is read as a comment.
+/\#specs/
