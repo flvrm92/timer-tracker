@@ -112,25 +112,25 @@ projectForm.addEventListener('submit', (e) => {
   const hourlyRate = hourlyRateInput.value.trim();
 
   if (!name) {
-    showErrorMessage('Please enter a project name.');
+    Dialog.toast('Please enter a project name.', 'error');
     return;
   }
 
   if (name.length > 100) {
-    showErrorMessage('Project name is too long (maximum 100 characters).');
+    Dialog.toast('Project name is too long (maximum 100 characters).', 'error');
     return;
   }
 
   // Validate hourly rate if billable is selected
   if (isBillable) {
     if (!hourlyRate) {
-      showErrorMessage('Please enter an hourly rate for billable projects.');
+      Dialog.toast('Please enter an hourly rate for billable projects.', 'error');
       return;
     }
 
     const rate = parseFloat(hourlyRate);
     if (isNaN(rate) || rate < 0) {
-      showErrorMessage('Please enter a valid positive hourly rate.');
+      Dialog.toast('Please enter a valid positive hourly rate.', 'error');
       return;
     }
   }
@@ -157,63 +157,33 @@ projectForm.addEventListener('submit', (e) => {
   }, 3000);
 });
 
-function deleteProject(id, name) {
+/**
+ * Confirms and deletes a project.
+ *
+ * Awaiting the pop-up is safe here: the only caller is the delete button's
+ * click closure in createDeleteButton, which ignores the return value. The
+ * message embeds the user-supplied project name, which Dialog renders with
+ * textContent rather than markup.
+ */
+async function deleteProject(id, name) {
   if (!id) {
-    showErrorMessage('Invalid project ID.');
+    Dialog.toast('Invalid project ID.', 'error');
     return;
   }
 
-  // Show confirmation dialog
   const confirmMessage = `Are you sure you want to delete the project "${name}"?\n\nThis action cannot be undone, but any existing timers for this project will be preserved.`;
 
-  if (confirm(confirmMessage)) {
+  const confirmed = await Dialog.confirm(confirmMessage, {
+    title: 'Delete project',
+    severity: 'danger',
+    confirmLabel: 'Delete',
+    cancelLabel: 'Cancel'
+  });
+
+  if (confirmed) {
     window.ipcRenderer.send('delete-project', id);
-    showSuccessMessage(`Project "${name}" has been deleted.`);
+    Dialog.toast(`Project "${name}" has been deleted.`, 'success');
   }
-}
-
-function showSuccessMessage(message) {
-  showMessage(message, 'success');
-}
-
-function showErrorMessage(message) {
-  showMessage(message, 'error');
-}
-
-function showMessage(message, type) {
-  // Remove any existing messages
-  const existingMessage = document.querySelector('.temp-message');
-  if (existingMessage) {
-    existingMessage.remove();
-  }
-
-  // Create message element
-  const messageEl = document.createElement('div');
-  messageEl.className = `alert alert-${type} temp-message`;
-  messageEl.textContent = message;
-  messageEl.style.position = 'fixed';
-  messageEl.style.top = '20px';
-  messageEl.style.right = '20px';
-  messageEl.style.zIndex = '1000';
-  messageEl.style.maxWidth = '400px';
-  messageEl.style.boxShadow = 'var(--shadow-lg)';
-
-  document.body.appendChild(messageEl);
-
-  // Auto-remove after 5 seconds
-  setTimeout(() => {
-    if (messageEl.parentNode) {
-      messageEl.style.opacity = '0';
-      messageEl.style.transform = 'translateX(100%)';
-      messageEl.style.transition = 'all var(--transition-base)';
-
-      setTimeout(() => {
-        if (messageEl.parentNode) {
-          messageEl.parentNode.removeChild(messageEl);
-        }
-      }, 200);
-    }
-  }, 5000);
 }
 
 // Event listeners
@@ -238,7 +208,7 @@ window.ipcRenderer.on('project-added', (project) => {
 
   // Show success message
   const billableText = project.is_billable ? ` (Billable at $${parseFloat(project.hourly_rate || 0).toFixed(2)}/hr)` : '';
-  showSuccessMessage(`Project "${project.name}"${billableText} has been created successfully.`);
+  Dialog.toast(`Project "${project.name}"${billableText} has been created successfully.`, 'success');
 
   // Reload projects
   loadProjects();
