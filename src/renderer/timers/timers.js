@@ -8,7 +8,6 @@ const startDateInput = document.getElementById('start-date');
 const endDateInput = document.getElementById('end-date');
 const customDateSection = document.getElementById('custom-date-section') || document.querySelector('.custom-date-section');
 const exportBtn = document.getElementById('export-btn');
-const statusMessage = document.getElementById('status-message');
 
 let currentPage = 1;
 let totalPages = 1;
@@ -145,13 +144,22 @@ function handleCancelClick(event) {
   fetchPage();
 }
 
-function handleDeleteClick(event) {
+// Awaiting the pop-up is safe: the ROW_ACTIONS dispatcher above ignores what
+// its handlers return.
+async function handleDeleteClick(event) {
   const tr = event.target.closest('tr');
   if (!tr) return;
   const timerId = Number(tr.dataset.id);
   if (isNaN(timerId)) return;
 
-  if (confirm('Are you sure you want to delete this timer?')) {
+  const confirmed = await Dialog.confirm('Are you sure you want to delete this timer?', {
+    title: 'Delete timer',
+    severity: 'danger',
+    confirmLabel: 'Delete',
+    cancelLabel: 'Cancel'
+  });
+
+  if (confirmed) {
     window.ipcRenderer.send('delete-timer', { id: timerId });
   }
 }
@@ -294,7 +302,7 @@ function handleDateChange() {
 
     // Validate date range
     if (selectedStartDate && selectedEndDate && selectedStartDate > selectedEndDate) {
-      showStatusMessage('Start date must be before or equal to end date', 'error');
+      Dialog.toast('Start date must be before or equal to end date', 'error');
       return;
     }
 
@@ -324,16 +332,6 @@ function fetchPage() {
     startDate: selectedStartDate,
     endDate: selectedEndDate
   });
-}
-
-function showStatusMessage(message, type = 'success') {
-  statusMessage.textContent = message;
-  statusMessage.className = `status-message ${type}`;
-  statusMessage.style.display = 'block';
-
-  setTimeout(() => {
-    statusMessage.style.display = 'none';
-  }, 5000);
 }
 
 function populateProjectFilter(projects) {
@@ -369,13 +367,13 @@ window.ipcRenderer.on('projects', (projects) => {
 window.ipcRenderer.on('csv-exported', ({ filePath, recordCount }) => {
   exportBtn.disabled = false;
   exportBtn.textContent = 'Export CSV';
-  showStatusMessage(`Successfully exported ${recordCount} records to ${filePath}`, 'success');
+  Dialog.toast(`Successfully exported ${recordCount} records to ${filePath}`, 'success');
 });
 
 window.ipcRenderer.on('csv-export-error', (message) => {
   exportBtn.disabled = false;
   exportBtn.textContent = 'Export CSV';
-  showStatusMessage(`Export failed: ${message}`, 'error');
+  Dialog.toast(`Export failed: ${message}`, 'error');
 });
 
 window.ipcRenderer.on('csv-export-cancelled', () => {
@@ -424,11 +422,15 @@ window.ipcRenderer.on('timer-updated', (row) => {
   `;
 });
 
+window.ipcRenderer.on('timer-delete-error', ({ message }) => {
+  Dialog.toast(`Could not delete the timer: ${message}`, 'error');
+});
+
 window.ipcRenderer.on('timer-deleted', ({ id }) => {
   const tr = bodyEl.querySelector(`tr[data-id='${id}']`);
   if (tr) {
     tr.remove();
-    showStatusMessage('Timer deleted successfully', 'success');
+    Dialog.toast('Timer deleted successfully', 'success');
   }
 });
 

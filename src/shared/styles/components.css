@@ -317,6 +317,18 @@
   border-color: var(--color-error-border);
 }
 
+.alert-warning {
+  background-color: var(--color-warning);
+  color: var(--color-text-inverse);
+  border-color: var(--color-warning-hover);
+}
+
+.alert-info {
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
 /* Tooltip */
 .tooltip {
   position: relative;
@@ -493,4 +505,174 @@
 
 .w-full {
   width: 100%;
+}
+/* Dialog (Pop-up) Component */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background-color: var(--color-overlay);
+  z-index: var(--z-modal);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.dialog-overlay.is-open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100vh - var(--space-16));
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+  transform: translateY(-0.5rem);
+  transition: transform var(--transition-base);
+}
+
+.dialog-overlay.is-open .dialog {
+  transform: translateY(0);
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6);
+  border-bottom: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+.dialog-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  color: var(--color-text);
+}
+
+.dialog-icon {
+  display: inline-flex;
+  color: var(--color-primary);
+}
+
+/*
+ * The shared .icon rule fills glyphs (fill: currentColor; stroke-width: 0),
+ * which turns these outline icons into solid discs at header size. Restore the
+ * stroke the SVGs were drawn with.
+ */
+.dialog-icon .icon {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.dialog-icon.is-success {
+  color: var(--color-success);
+}
+
+.dialog-icon.is-warning {
+  color: var(--color-warning);
+}
+
+.dialog-icon.is-danger {
+  color: var(--color-danger);
+}
+
+.dialog-body {
+  padding: var(--space-6);
+  overflow-y: auto;
+}
+
+.dialog-message {
+  margin: 0;
+  font-size: var(--font-size-base);
+  line-height: var(--line-height-normal);
+  color: var(--color-text);
+  /* Messages are set with textContent; pre-line keeps their line breaks. */
+  white-space: pre-line;
+}
+
+.dialog-message:empty {
+  display: none;
+}
+
+.dialog-field {
+  margin-top: var(--space-4);
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+}
+
+/* Toast Notifications */
+.toast-container {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 25rem;
+  z-index: var(--z-popover);
+  pointer-events: none;
+}
+
+.toast {
+  /* .alert carries a bottom margin for inline use; the container owns the gap. */
+  margin-bottom: 0;
+  box-shadow: var(--shadow-lg);
+  pointer-events: auto;
+  animation: toast-in var(--transition-base) ease-out;
+}
+
+.toast.is-leaving {
+  opacity: 0;
+  transform: translateX(100%);
+  transition: opacity var(--transition-base), transform var(--transition-base);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(1rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 480px) {
+  .dialog-footer {
+    flex-direction: column-reverse;
+  }
+
+  .dialog-footer .btn {
+    width: 100%;
+  }
+
+  .toast-container {
+    left: var(--space-4);
+    right: var(--space-4);
+    width: auto;
+    max-width: none;
+  }
 }
