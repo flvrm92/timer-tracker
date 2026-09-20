@@ -11,6 +11,7 @@ module.exports = {
     'src/shared/utils/csvUtils.js',
     'src/shared/utils/escapeHtml.js',
     'src/shared/utils/dateHelper.js',
+    'src/shared/utils/numberHelper.js',
     'src/shared/components/dialog.js'
   ],
   coveragePathIgnorePatterns: [

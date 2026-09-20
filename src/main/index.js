@@ -73,6 +73,13 @@ const createWindow = () => {
       }]
     },
     {
+      label: 'Dashboard',
+      submenu: [{
+        label: 'Overview',
+        click: () => win.loadFile('src/renderer/dashboard/dashboard.html')
+      }]
+    },
+    {
       label: 'Window',
       submenu: [
         {

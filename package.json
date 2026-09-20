@@ -1,6 +1,6 @@
 {
   "name": "time-tracker",
-  "version": "1.0.1",
+  "version": "1.0.3",
   "description": "Track time per project and export billable hours to CSV.",
   "main": "src/main/index.js",
   "scripts": {
@@ -8,9 +8,11 @@
     "test:watch": "jest --watchAll",
     "generate-icons": "node scripts/generate-icons.js",
     "start": "electron-forge start",
-    "prepackage": "npm run generate-icons",
+    "prepackage": "npm run generate-icons && npm run vendor-chart",
     "package": "electron-forge package",
-    "make:msix": "npm run generate-icons && electron-forge make --targets @electron-forge/maker-msix"
+    "make:msix": "npm run generate-icons && npm run vendor-chart && electron-forge make --targets @electron-forge/maker-msix",
+    "vendor-chart": "node scripts/vendor-chart.js",
+    "postinstall": "node scripts/vendor-chart.js"
   },
   "author": "flvrm92",
   "license": "ISC",
@@ -30,6 +32,7 @@
     "sharp": "^0.35.3"
   },
   "dependencies": {
+    "chart.js": "4.5.1",
     "sqlite3": "6.0.1"
   },
   "overrides": {

@@ -21,6 +21,8 @@ const SEND_CHANNELS = Object.freeze([
   'update-timer',
   'delete-timer',
   'export-csv',
+  'get-dashboard-summary',
+  'get-project-monthly',
 ]);
 
 const RECEIVE_CHANNELS = Object.freeze([
@@ -36,6 +38,10 @@ const RECEIVE_CHANNELS = Object.freeze([
   'csv-exported',
   'csv-export-error',
   'csv-export-cancelled',
+  'dashboard-summary',
+  'dashboard-summary-error',
+  'project-monthly',
+  'project-monthly-error',
 ]);
 
 function assertAllowed(allowed, channel, verb) {

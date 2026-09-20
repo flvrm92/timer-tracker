@@ -376,6 +376,76 @@ function getProjectById(id, callback) {
   });
 }
 
+/**
+ * One row per project with its all-time totals, highest earning first.
+ *
+ * LEFT JOIN, not INNER: a project with no timers yet still has to appear, with
+ * zeros. COALESCE covers both that case and the NULL amount_earned written for
+ * non-billable work.
+ *
+ * Sums are returned raw - rounding happens once, in the IPC layer, on the way
+ * out. Rounding here and again later is how 129.89999999999 turns into 129.89.
+ */
+function getProjectTotals(callback) {
+  const query = `SELECT p.id,
+                        p.name,
+                        p.is_billable,
+                        p.hourly_rate,
+                        COALESCE(SUM(t.duration), 0)      AS total_seconds,
+                        COALESCE(SUM(t.amount_earned), 0) AS total_earned,
+                        COUNT(t.id)                       AS entry_count,
+                        MIN(t.start_time)                 AS first_entry,
+                        MAX(t.start_time)                 AS last_entry
+                 FROM projects p
+                 LEFT JOIN timers t ON t.project_id = p.id
+                 GROUP BY p.id
+                 ORDER BY total_earned DESC, p.name ASC`;
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      console.error('Error retrieving project totals:', err.message);
+      return callback(err);
+    }
+    callback(null, rows);
+  });
+}
+
+/**
+ * Monthly totals from windowStart onwards, one row per month that has timers.
+ *
+ * Months with no rows are absent from the result - padding the window out to a
+ * full 12 buckets is the caller's job, because only the caller knows which 12
+ * months it asked about.
+ *
+ * Buckets by UTC, since start_time is stored as an ISO-8601 UTC string and the
+ * Timers list and CSV export both read their dates the same way.
+ *
+ * @param {number|null} projectId null totals every project together
+ * @param {string} windowStart ISO timestamp, inclusive lower bound
+ */
+function getMonthlyTotals(projectId, windowStart, callback) {
+  let query = `SELECT strftime('%Y-%m', t.start_time)   AS month,
+                      COALESCE(SUM(t.duration), 0)      AS total_seconds,
+                      COALESCE(SUM(t.amount_earned), 0) AS total_earned
+               FROM timers t
+               WHERE t.start_time >= ?`;
+  const params = [windowStart];
+
+  if (projectId !== null && projectId !== undefined) {
+    query += ' AND t.project_id = ?';
+    params.push(projectId);
+  }
+
+  query += ' GROUP BY month ORDER BY month ASC';
+
+  db.all(query, params, (err, rows) => {
+    if (err) {
+      console.error('Error retrieving monthly totals:', err.message);
+      return callback(err);
+    }
+    callback(null, rows);
+  });
+}
+
 function getProjects(callback) {
   const query = `SELECT * FROM projects`;
   db.all(query, [], (err, rows) => {
@@ -400,6 +470,8 @@ module.exports = {
   getTimersForExport,
   updateTimer,
   getTimerById,
+  getProjectTotals,
+  getMonthlyTotals,
   deleteTimer,
   initializeDatabase
 };

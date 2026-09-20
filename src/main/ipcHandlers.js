@@ -10,8 +10,12 @@ const {
   updateTimer,
   deleteTimer,
   getTimersForExport,
+  getProjectTotals,
+  getMonthlyTotals,
   initializeDatabase } = require('../infra/database');
 const { generateCSV, generateFileName } = require('../shared/utils/csvUtils');
+const { roundTo2 } = require('../shared/utils/numberHelper');
+const { formatMonthLabel, lastTwelveMonths, monthWindowStart } = require('../shared/utils/dateHelper');
 const fs = require('fs');
 
 function setupIpcHandlers() {
@@ -56,6 +60,97 @@ function setupIpcHandlers() {
       if (!err) {
         event.sender.send('projects', projects);
       }
+    });
+  });
+
+  /**
+   * Dashboard: all-time totals per project, plus the headline figures.
+   *
+   * Everything crosses IPC already rounded to 2 decimals so the renderer only
+   * ever formats. The overall earnings total is the sum of the rounded
+   * per-project figures, not a second sum of the raw ones - otherwise the
+   * table footer and the KPI tile could disagree by a cent.
+   */
+  ipcMain.on('get-dashboard-summary', (event) => {
+    getProjectTotals((err, rows) => {
+      if (err) return event.sender.send('dashboard-summary-error', { message: err.message });
+
+      const projects = (rows || []).map((row) => {
+        const seconds = row.total_seconds || 0;
+        const rate = row.hourly_rate;
+        return {
+          id: row.id,
+          name: row.name,
+          isBillable: !!row.is_billable,
+          hourlyRate: rate === null || rate === undefined ? null : roundTo2(rate),
+          totalSeconds: seconds,
+          totalHours: roundTo2(seconds / 3600),
+          totalEarned: roundTo2(row.total_earned),
+          entryCount: row.entry_count || 0,
+          firstEntry: row.first_entry || null,
+          lastEntry: row.last_entry || null
+        };
+      });
+
+      const totalSeconds = projects.reduce((sum, p) => sum + p.totalSeconds, 0);
+      const billableSeconds = projects.reduce((sum, p) => sum + (p.isBillable ? p.totalSeconds : 0), 0);
+      const latest = projects.reduce((acc, p) => {
+        if (!p.lastEntry) return acc;
+        return !acc || p.lastEntry > acc.lastEntry ? { lastEntry: p.lastEntry, name: p.name } : acc;
+      }, null);
+
+      event.sender.send('dashboard-summary', {
+        projects,
+        totals: {
+          totalSeconds,
+          billableSeconds,
+          totalHours: roundTo2(totalSeconds / 3600),
+          billableHours: roundTo2(billableSeconds / 3600),
+          totalEarned: roundTo2(projects.reduce((sum, p) => sum + p.totalEarned, 0)),
+          entryCount: projects.reduce((sum, p) => sum + p.entryCount, 0),
+          projectCount: projects.length,
+          billableCount: projects.filter((p) => p.isBillable).length,
+          lastEntry: latest ? latest.lastEntry : null,
+          lastEntryProject: latest ? latest.name : null
+        }
+      });
+    });
+  });
+
+  /**
+   * Dashboard chart: always exactly 12 months, oldest first, whether or not
+   * the project has timers in each of them. A quiet month has to render as a
+   * visible zero rather than shrinking the chart.
+   *
+   * projectId null totals every project together. Nothing in the UI sends that
+   * yet, but the query and the padding both handle it.
+   */
+  ipcMain.on('get-project-monthly', (event, { projectId } = {}) => {
+    const filterProjectId = projectId === null || projectId === undefined || projectId === '' ? null : projectId;
+    // One reference instant for both the window and its lower bound, so a
+    // request that lands on a month boundary cannot straddle two windows.
+    const now = new Date();
+    const months = lastTwelveMonths(now);
+
+    getMonthlyTotals(filterProjectId, monthWindowStart(now), (err, rows) => {
+      if (err) return event.sender.send('project-monthly-error', { message: err.message });
+
+      const byMonth = new Map((rows || []).map((row) => [row.month, row]));
+
+      event.sender.send('project-monthly', {
+        projectId: filterProjectId,
+        months: months.map((month) => {
+          const row = byMonth.get(month);
+          const seconds = row ? row.total_seconds || 0 : 0;
+          return {
+            month,
+            label: formatMonthLabel(month),
+            totalSeconds: seconds,
+            totalHours: roundTo2(seconds / 3600),
+            totalEarned: roundTo2(row ? row.total_earned : 0)
+          };
+        })
+      });
     });
   });
 
