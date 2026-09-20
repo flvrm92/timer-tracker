@@ -91,26 +91,6 @@
       align-items: center;
     }
 
-    .status-message {
-      margin-top: var(--space-2);
-      padding: var(--space-3);
-      border-radius: var(--radius-base);
-      font-size: var(--font-size-sm);
-      display: none;
-    }
-
-    .status-message.success {
-      background-color: var(--color-success-bg);
-      color: var(--color-success-text);
-      border: 1px solid var(--color-success-border);
-    }
-
-    .status-message.error {
-      background-color: var(--color-error);
-      color: var(--color-error-text);
-      border: 1px solid var(--color-error-border);
-    }
-
     @media (max-width: 768px) {
       .controls {
         flex-direction: column;
@@ -186,8 +166,6 @@
         </div>
       </div>
 
-      <div id="status-message" class="status-message"></div>
-
       <div style="overflow-x: auto;">
         <table class="table">
           <thead>
@@ -221,6 +199,7 @@
   <script src="../../shared/utils/escapeHtml.js"></script>
   <script src="../../shared/utils/theme.js"></script>
   <script src="../../shared/components/icons.js"></script>
+  <script src="../../shared/components/dialog.js"></script>
   <script src="../../shared/utils/dateHelper.js"></script>
   <script src="timers.js"></script>
 </body>

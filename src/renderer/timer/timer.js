@@ -28,9 +28,12 @@ function formatTime(seconds) {
   return `${hours}:${minutes}:${secs}`;
 }
 
-function startTimer() {
+async function startTimer() {
   if (!selectedProjectId) {
-    alert('Please select a project before starting the timer.');
+    await Dialog.alert('Please select a project before starting the timer.', {
+      title: 'No project selected',
+      severity: 'warning'
+    });
     return;
   }
 
@@ -78,7 +81,7 @@ function stopTimer() {
   document.getElementById('project-dropdown').disabled = false;
 
   // Show success feedback
-  showSuccessMessage(`Timer saved! Duration: ${formatTime(duration)}`);
+  Dialog.toast(`Timer saved! Duration: ${formatTime(duration)}`, 'success');
 }
 
 function populateProjectDropdown(projects) {
@@ -93,26 +96,6 @@ function populateProjectDropdown(projects) {
 
 function loadProjects() {
   window.ipcRenderer.send('get-projects');
-}
-
-function showSuccessMessage(message) {
-  // Create a temporary success message
-  const messageEl = document.createElement('div');
-  messageEl.className = 'alert alert-success';
-  messageEl.textContent = message;
-  messageEl.style.position = 'fixed';
-  messageEl.style.top = '20px';
-  messageEl.style.right = '20px';
-  messageEl.style.zIndex = '1000';
-  messageEl.style.maxWidth = '300px';
-
-  document.body.appendChild(messageEl);
-
-  setTimeout(() => {
-    if (messageEl.parentNode) {
-      messageEl.parentNode.removeChild(messageEl);
-    }
-  }, 5000);
 }
 
 // Event listeners
