@@ -10,7 +10,8 @@ module.exports = {
     'src/settings/preload.js',
     'src/shared/utils/csvUtils.js',
     'src/shared/utils/escapeHtml.js',
-    'src/shared/utils/dateHelper.js'
+    'src/shared/utils/dateHelper.js',
+    'src/shared/utils/numberHelper.js'
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/'

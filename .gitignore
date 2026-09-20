@@ -80,3 +80,8 @@ packaging/identity.local.json
 # Internal phase reports - kept on disk, out of the repo.
 # The leading hash must be escaped or the whole line is read as a comment.
 /\#specs/
+
+# Vendored Chart.js UMD build. Copied out of node_modules by
+# scripts/vendor-chart.js on postinstall, so the version in package.json is
+# the only place it is pinned.
+/src/renderer/vendor/
