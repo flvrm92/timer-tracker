@@ -314,3 +314,41 @@ describe('Database deleteTimer operation', () => {
     expect(total).toBe(0);
   });
 });
+
+describe('Database non-ASCII round-trip', () => {
+  // Guards the storage half of the CSV mojibake fix: SQLite stores TEXT as
+  // UTF-8 and node-sqlite3 binds JS strings as UTF-8, so names and task
+  // descriptions must come back byte-identical. The emoji is deliberate --
+  // it is an astral-plane codepoint, so it catches surrogate-pair mishandling.
+  const PROJECT_NAME = 'Próprio — Conciliação 🎯';
+  const TASK_DESCRIPTION = 'Avançado: revisão de ações';
+
+  beforeAll(async () => {
+    await promisifyInitializeDatabase();
+  });
+
+  test('project names survive insert and select unchanged', async () => {
+    const created = await promisifyInsertProject(PROJECT_NAME);
+    expect(created.name).toBe(PROJECT_NAME);
+
+    const projects = await new Promise((resolve, reject) => {
+      getProjects((err, rows) => err ? reject(err) : resolve(rows));
+    });
+    const stored = projects.find(p => p.id === created.id);
+    expect(stored.name).toBe(PROJECT_NAME);
+  });
+
+  test('task descriptions survive insert and select unchanged', async () => {
+    const p = await promisifyInsertProject('Encoding Task Project');
+    const start = new Date().toISOString();
+    const end = new Date(Date.now() + 1000).toISOString();
+
+    await new Promise((resolve, reject) => {
+      insertTimer(p.id, start, end, 1, TASK_DESCRIPTION, (err) => err ? reject(err) : resolve());
+    });
+
+    const rows = await promisifyGetTimers(1, 15, p.id);
+    expect(rows[0].task_description).toBe(TASK_DESCRIPTION);
+    expect(rows[0].project_name).toBe('Encoding Task Project');
+  });
+});
