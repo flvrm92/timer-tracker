@@ -93,12 +93,15 @@ describe('preload: darkMode API shape', () => {
 
 describe('preload: IPC channel allowlist', () => {
   const SEND_CHANNELS = [
-    'add-project', 'delete-project', 'get-projects', 'save-timer',
+    'add-project', 'delete-project', 'get-projects',
+    'start-timer', 'stop-timer', 'get-active-timer',
     'get-timers', 'update-timer', 'delete-timer', 'export-csv',
     'get-dashboard-summary', 'get-project-monthly',
   ];
   const RECEIVE_CHANNELS = [
-    'projects', 'project-added', 'project-deleted', 'timers', 'timers-error',
+    'projects', 'project-added', 'project-deleted',
+    'active-timer', 'timer-start-error', 'timer-saved',
+    'timers', 'timers-error',
     'timer-updated', 'timer-update-error', 'timer-deleted', 'timer-delete-error',
     'csv-exported', 'csv-export-error', 'csv-export-cancelled',
     'dashboard-summary', 'dashboard-summary-error',

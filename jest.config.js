@@ -6,6 +6,8 @@ module.exports = {
   collectCoverageFrom: [
     'src/infra/database.js',
     'src/main/ipcHandlers.js',
+    'src/main/activeTimer.js',
+    'src/main/timerPersistence.js',
     'src/main/index.js',
     'src/settings/preload.js',
     'src/shared/utils/csvUtils.js',

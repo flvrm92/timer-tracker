@@ -621,6 +621,63 @@
   background-color: var(--color-surface);
 }
 
+/* Running Timer Indicator */
+/* Bottom-right: the toast container already owns the top-right corner. */
+.running-timer {
+  position: fixed;
+  bottom: var(--space-5);
+  right: var(--space-5);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.running-timer[hidden] {
+  /* display:flex above would otherwise beat the UA [hidden] rule. */
+  display: none;
+}
+
+.running-timer-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background-color: var(--color-success);
+  animation: running-timer-pulse 1.6s ease-in-out infinite;
+}
+
+.running-timer-elapsed {
+  font-family: var(--font-family-mono);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+}
+
+.running-timer-project {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+}
+
+@keyframes running-timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-timer-dot {
+    animation: none;
+  }
+}
+
 /* Toast Notifications */
 .toast-container {
   position: fixed;

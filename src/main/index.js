@@ -164,7 +164,46 @@ const createWindow = () => {
 }
 
 const setupIpcHandlers = require('./ipcHandlers');
+const activeTimer = require('./activeTimer');
+const { persistTimer } = require('./timerPersistence');
 setupIpcHandlers();
+
+/**
+ * A timer running when the app closes is saved rather than lost.
+ *
+ * Quitting has to be deferred until the SQLite insert has actually run, so the
+ * first pass through here cancels the quit and re-issues it from the insert
+ * callback. Two guards keep that second pass from saving again: the `quitting`
+ * flag, and activeTimer.stop() having already emptied the slot.
+ *
+ * The timeout is a backstop - a hung insert must not leave the user with a
+ * window they cannot close.
+ */
+let quitting = false;
+
+app.on('before-quit', (event) => {
+  if (quitting || !activeTimer.isRunning()) return;
+
+  quitting = true;
+  event.preventDefault();
+
+  const finished = activeTimer.stop();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    app.quit();
+  };
+
+  const backstop = setTimeout(finish, 2000);
+  if (backstop.unref) backstop.unref();
+
+  persistTimer(finished, (err) => {
+    if (err) console.error('Could not save the running timer on quit:', err.message);
+    clearTimeout(backstop);
+    finish();
+  });
+});
 
 app.whenReady().then(() => {
   createWindow();

@@ -1,9 +1,7 @@
 const { ipcMain, nativeTheme, dialog } = require('electron');
 const {
-  insertTimer,
   insertProject,
   getProjects,
-  getProjectById,
   deleteProject,
   getTimers,
   countTimers,
@@ -16,6 +14,8 @@ const {
 const { generateCSV, generateFileName } = require('../shared/utils/csvUtils');
 const { roundTo2 } = require('../shared/utils/numberHelper');
 const { formatMonthLabel, lastTwelveMonths, monthWindowStart } = require('../shared/utils/dateHelper');
+const activeTimer = require('./activeTimer');
+const { persistTimer } = require('./timerPersistence');
 const fs = require('fs');
 
 function setupIpcHandlers() {
@@ -154,28 +154,43 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.on('save-timer', (event, { selectedProjectId, startTime, endTime, duration, taskDesc }) => {
-    // Get project details to calculate amount earned
-    getProjectById(selectedProjectId, (err, project) => {
-      if (err) {
-        console.error('Error getting project for timer calculation:', err);
-        // Fall back to inserting timer without amount calculation
-        insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc);
-        return;
-      }
+  /**
+   * Running-timer control. The renderer never owns the clock: it asks main to
+   * start or stop, and renders whatever comes back on 'active-timer'. That is
+   * what lets a page be destroyed by navigation and rebuilt without the timer
+   * being affected.
+   *
+   * Every handler answers on 'active-timer' so each page has exactly one
+   * rendering path, whether it just started a timer or merely asked what is
+   * running.
+   */
+  ipcMain.on('get-active-timer', (event) => {
+    event.sender.send('active-timer', activeTimer.getState());
+  });
 
-      let amountEarned = null;
+  ipcMain.on('start-timer', (event, { projectId, taskDesc, projectName } = {}) => {
+    const result = activeTimer.start({ projectId, taskDesc, projectName });
 
-      // Calculate amount earned if project is billable
-      if (project && project.is_billable && project.hourly_rate) {
-        const durationInHours = duration / 3600; // Convert seconds to hours
-        amountEarned = durationInHours * parseFloat(project.hourly_rate);
-        // Round to 2 decimal places
-        amountEarned = Math.round(amountEarned * 100) / 100;
-      }
+    if (!result.ok) {
+      const message = result.reason === 'already-running'
+        ? 'A timer is already running.'
+        : 'Select a project before starting the timer.';
+      return event.sender.send('timer-start-error', { reason: result.reason, message });
+    }
 
-      // Insert timer with calculated amount
-      insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc, amountEarned);
+    event.sender.send('active-timer', result.state);
+  });
+
+  ipcMain.on('stop-timer', (event) => {
+    const finished = activeTimer.stop();
+
+    // Idle stop - a double click, or a page that rendered a stale state. Reply
+    // anyway so the caller converges on "nothing is running".
+    if (!finished) return event.sender.send('active-timer', null);
+
+    event.sender.send('active-timer', null);
+    persistTimer(finished, () => {
+      event.sender.send('timer-saved', { duration: finished.duration });
     });
   });
 
