@@ -1,6 +1,6 @@
 {
   "name": "time-tracker",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Track time per project and export billable hours to CSV.",
   "main": "src/main/index.js",
   "scripts": {

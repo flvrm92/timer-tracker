@@ -1,5 +1,10 @@
 const { formatDate, formatTime } = require('./dateHelper');
 
+// Excel on Windows opens a BOM-less CSV using the system ANSI codepage (CP1252),
+// so UTF-8 accented text arrives as mojibake ("Próprio" -> "PrÃ³prio"). The BOM
+// forces Excel to read the file as UTF-8.
+const UTF8_BOM = '\uFEFF';
+
 function formatDuration(seconds) {
   if (!seconds || seconds < 0) return '0:00';
   const hours = Math.floor(seconds / 3600);
@@ -8,9 +13,24 @@ function formatDuration(seconds) {
   return `${hours}:${minutes.toString().padStart(2, '0')}`;
 }
 
+// Spreadsheet apps evaluate a cell whose text begins with one of these as a
+// formula, so a project named =HYPERLINK(...) would execute on open instead of
+// being displayed. A leading apostrophe forces Excel to treat it as literal text.
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+
+function isFormulaLike(value) {
+  // A negative number ("-50.00") is data, not a formula.
+  return FORMULA_TRIGGER.test(value) && !PLAIN_NUMBER.test(value);
+}
+
 function escapeCSVField(field) {
   if (field === null || field === undefined) return '';
-  const stringField = String(field);
+  let stringField = String(field);
+
+  if (isFormulaLike(stringField)) {
+    stringField = "'" + stringField;
+  }
 
   // If field contains comma, quote, or newline, wrap in quotes and escape internal quotes
   if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
@@ -20,7 +40,6 @@ function escapeCSVField(field) {
 }
 
 function generateCSV(timers) {
-  console.log('Generating CSV for timers:', timers);
   const headers = [
     'Project',
     'Description',
@@ -33,7 +52,7 @@ function generateCSV(timers) {
     'Amount Earned'
   ];
 
-  let csv = headers.map(escapeCSVField).join(',') + '\n';
+  let csv = UTF8_BOM + headers.map(escapeCSVField).join(',') + '\n';
 
   timers.forEach(timer => {
     // Format hourly rate (only show for billable projects)
@@ -76,6 +95,7 @@ function generateFileName(projectName = null) {
 // Guarded so this file is safe to load as a <script src> as well as via require().
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
+    UTF8_BOM,
     formatDuration,
     escapeCSVField,
     generateCSV,
