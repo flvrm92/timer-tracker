@@ -157,6 +157,9 @@ projectForm.addEventListener('submit', (e) => {
   }, 3000);
 });
 
+/** Name of the project awaiting main's verdict, for the success toast. */
+let pendingDeleteName = null;
+
 /**
  * Confirms and deletes a project.
  *
@@ -181,14 +184,29 @@ async function deleteProject(id, name) {
   });
 
   if (confirmed) {
+    // The name is held for the confirmation toast, which is deferred until main
+    // reports back - the delete can be refused while a timer is running for
+    // this project, and announcing success first would be a lie.
+    pendingDeleteName = name;
     window.ipcRenderer.send('delete-project', id);
-    Dialog.toast(`Project "${name}" has been deleted.`, 'success');
   }
 }
 
 // Event listeners
 window.ipcRenderer.on('project-deleted', () => {
+  if (pendingDeleteName) {
+    Dialog.toast(`Project "${pendingDeleteName}" has been deleted.`, 'success');
+    pendingDeleteName = null;
+  }
   loadProjects();
+});
+
+window.ipcRenderer.on('project-delete-error', ({ message }) => {
+  pendingDeleteName = null;
+  Dialog.alert(message || 'The project could not be deleted.', {
+    title: 'Could not delete the project',
+    severity: 'warning'
+  });
 });
 
 window.ipcRenderer.on('projects', (projects) => {

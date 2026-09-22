@@ -296,4 +296,51 @@ describe('main/index: auto-save on quit', () => {
     persist.mock.calls[0][1](new Error('disk full'));
     expect(app.quit).toHaveBeenCalledTimes(1);
   });
+
+  /**
+   * The backstop is the one path that loses a session outright, so it has to
+   * both fire and leave a record of what it discarded.
+   */
+  describe('the save-on-quit backstop', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    test('an insert that never calls back still closes the app, and says what was lost', () => {
+      // spyOn reuses an existing spy, so drop whatever earlier tests logged.
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      logged.mockClear();
+      timer.start({ projectId: 9, taskDesc: 'Hung' });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      // persistTimer is mocked and never calls back - a wedged insert.
+      jest.advanceTimersByTime(4999);
+      expect(app.quit).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1);
+      expect(app.quit).toHaveBeenCalledTimes(1);
+      expect(logged.mock.calls[0][0]).toMatch(/Timed out saving the running timer/);
+      expect(logged.mock.calls[0][0]).toContain('project 9');
+    });
+
+    test('a callback arriving after the backstop does not quit twice', () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      timer.start({ projectId: 9 });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      jest.advanceTimersByTime(5000);
+      persist.mock.calls[0][1](null);
+
+      expect(app.quit).toHaveBeenCalledTimes(1);
+    });
+
+    test('a prompt save cancels the backstop', () => {
+      timer.start({ projectId: 9 });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      persist.mock.calls[0][1](null);
+      jest.advanceTimersByTime(10_000);
+
+      expect(app.quit).toHaveBeenCalledTimes(1);
+    });
+  });
 });

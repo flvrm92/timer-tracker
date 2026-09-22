@@ -49,9 +49,30 @@ function setupIpcHandlers() {
     }
   });
 
+  /**
+   * Deleting a project is refused while that project's timer is running.
+   *
+   * The running timer holds only a project id, and the row it will insert on
+   * stop is written with no foreign-key enforcement - so deleting underneath it
+   * produces a timer pointing at a project that no longer exists, which the
+   * listing renders as a blank name. Stopping first makes the choice explicit.
+   *
+   * Ids are compared as strings: the renderer's dropdown yields text while the
+   * projects list passes the raw database number.
+   */
   ipcMain.on('delete-project', (event, id) => {
+    const running = activeTimer.getState();
+
+    if (running && String(running.projectId) === String(id)) {
+      return event.sender.send('project-delete-error', {
+        reason: 'timer-running',
+        message: 'This project has a timer running. Stop the timer before deleting it.'
+      });
+    }
+
     deleteProject(id, (err) => {
-      if (!err) event.sender.send('project-deleted');
+      if (err) return event.sender.send('project-delete-error', { message: err.message });
+      event.sender.send('project-deleted');
     });
   });
 
@@ -189,7 +210,19 @@ function setupIpcHandlers() {
     if (!finished) return event.sender.send('active-timer', null);
 
     event.sender.send('active-timer', null);
-    persistTimer(finished, () => {
+
+    // The slot is already empty and the page has already repainted as idle, so
+    // a failed insert means the session exists nowhere. Say so instead of
+    // reporting success: the duration goes back with the error, which is the
+    // only remaining copy the user can act on.
+    persistTimer(finished, (insertErr) => {
+      if (insertErr) {
+        return event.sender.send('timer-save-error', {
+          duration: finished.duration,
+          message: insertErr.message
+        });
+      }
+
       event.sender.send('timer-saved', { duration: finished.duration });
     });
   });

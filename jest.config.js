@@ -14,7 +14,9 @@ module.exports = {
     'src/shared/utils/escapeHtml.js',
     'src/shared/utils/dateHelper.js',
     'src/shared/utils/numberHelper.js',
-    'src/shared/components/dialog.js'
+    'src/shared/components/dialog.js',
+    'src/shared/components/runningTimer.js',
+    'src/renderer/timer/timer.js'
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/'

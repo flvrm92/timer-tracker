@@ -161,6 +161,18 @@ window.ipcRenderer.on('timer-saved', ({ duration }) => {
   Dialog.toast(`Timer saved! Duration: ${formatTime(duration)}`, 'success');
 });
 
+// The page has already repainted as idle and main has dropped the timer, so
+// this dialog is the only place the elapsed time still exists. A toast would
+// fade; an alert waits to be dismissed, giving the user a chance to write the
+// duration down and re-enter it from the Timers page.
+window.ipcRenderer.on('timer-save-error', ({ duration }) => {
+  Dialog.alert(
+    `The timer could not be saved. Its duration was ${formatTime(duration)} - ` +
+    'add it manually from the Timers page if you need to keep it.',
+    { title: 'Timer not saved', severity: 'danger' }
+  );
+});
+
 startBtn.addEventListener('click', startTimer);
 stopBtn.addEventListener('click', stopTimer);
 

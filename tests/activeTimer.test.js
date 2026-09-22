@@ -28,7 +28,7 @@ describe('activeTimer', () => {
       projectId: 7,
       projectName: 'Acme',
       taskDesc: 'Refactor',
-      elapsedSeconds: 0
+      startedAtMs: now
     });
     expect(result.state.startTimeIso).toBe(new Date(now).toISOString());
   });
@@ -46,21 +46,29 @@ describe('activeTimer', () => {
     expect(activeTimer.getState()).toMatchObject({ projectId: 1, taskDesc: 'First' });
   });
 
-  test('elapsed is derived from the wall clock, not accumulated ticks', () => {
+  test('the start anchor survives reads and is what elapsed is measured from', () => {
     activeTimer.start({ projectId: 1 });
+    const anchor = now;
 
     now += 65_500; // no ticks ran - this is what a page reload looks like
-    expect(activeTimer.getState().elapsedSeconds).toBe(65);
+    expect(activeTimer.getState().startedAtMs).toBe(anchor);
 
     now += 3_600_000;
-    expect(activeTimer.getState().elapsedSeconds).toBe(3665);
+    expect(activeTimer.getState().startedAtMs).toBe(anchor);
+    expect(activeTimer.stop().duration).toBe(3665);
   });
 
-  test('a backwards clock adjustment clamps to zero rather than going negative', () => {
+  test('getState carries no precomputed elapsed for callers to go stale on', () => {
+    activeTimer.start({ projectId: 1 });
+
+    expect(activeTimer.getState()).not.toHaveProperty('elapsedSeconds');
+  });
+
+  test('a backwards clock adjustment clamps duration to zero rather than going negative', () => {
     activeTimer.start({ projectId: 1 });
     now -= 5_000;
 
-    expect(activeTimer.getState().elapsedSeconds).toBe(0);
+    expect(activeTimer.stop().duration).toBe(0);
   });
 
   test('stop returns the record to persist and clears the slot', () => {

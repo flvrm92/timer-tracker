@@ -177,8 +177,12 @@ setupIpcHandlers();
  * flag, and activeTimer.stop() having already emptied the slot.
  *
  * The timeout is a backstop - a hung insert must not leave the user with a
- * window they cannot close.
+ * window they cannot close. It is generous on purpose: a local SQLite insert
+ * that takes seconds means something is already wrong, and quitting early
+ * discards the session for good, so the bias is towards waiting. When it does
+ * win it says so, because otherwise the loss leaves no trace anywhere.
  */
+const SAVE_ON_QUIT_TIMEOUT_MS = 5000;
 let quitting = false;
 
 app.on('before-quit', (event) => {
@@ -195,7 +199,13 @@ app.on('before-quit', (event) => {
     app.quit();
   };
 
-  const backstop = setTimeout(finish, 2000);
+  const backstop = setTimeout(() => {
+    console.error(
+      `Timed out saving the running timer on quit; ${finished.duration}s for project ` +
+      `${finished.selectedProjectId} started at ${finished.startTime} was not written.`
+    );
+    finish();
+  }, SAVE_ON_QUIT_TIMEOUT_MS);
   if (backstop.unref) backstop.unref();
 
   persistTimer(finished, (err) => {

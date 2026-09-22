@@ -49,6 +49,11 @@ function start({ projectId, taskDesc = '', projectName = null } = {}) {
 
 /**
  * The payload every page renders from - `null` when nothing is running.
+ *
+ * Carries the anchor rather than an elapsed count. Every consumer repaints
+ * once a second and would have to recompute from `startedAtMs` anyway, so a
+ * bundled elapsed value would be stale the instant it arrived and give callers
+ * a second, wrong way to ask the same question.
  */
 function getState() {
   if (!active) return null;
@@ -57,8 +62,7 @@ function getState() {
     projectName: active.projectName,
     taskDesc: active.taskDesc,
     startTimeIso: active.startTimeIso,
-    startedAtMs: active.startedAtMs,
-    elapsedSeconds: Math.max(0, Math.floor((Date.now() - active.startedAtMs) / 1000))
+    startedAtMs: active.startedAtMs
   };
 }
 
