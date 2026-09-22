@@ -41,6 +41,7 @@ const fs = require('fs');
 
 const db = require('../src/infra/database');
 const setupIpcHandlers = require('../src/main/ipcHandlers');
+const activeTimer = require('../src/main/activeTimer');
 
 function createMockEvent() {
   return {
@@ -56,6 +57,7 @@ setupIpcHandlers();
 describe('IPC Handlers', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    activeTimer.reset();
     nativeTheme.shouldUseDarkColors = false;
     nativeTheme.themeSource = 'system';
   });
@@ -159,11 +161,37 @@ describe('IPC Handlers', () => {
     expect(sent).toBeTruthy();
   });
 
-  test('delete-project error does not send', () => {
+  test('delete-project error reports back instead of going quiet', () => {
     db.deleteProject.mockImplementation((id, cb) => cb(new Error('gone')));
     const event = createMockEvent();
     ipcMain.handlers['delete-project'](event, 99);
-    expect(event.sender.sent.length).toBe(0);
+
+    expect(event.sender.sent).toEqual([
+      { channel: 'project-delete-error', payload: { message: 'gone' } }
+    ]);
+  });
+
+  test('delete-project is refused while that project has a timer running', () => {
+    activeTimer.start({ projectId: '3' });
+    const event = createMockEvent();
+    ipcMain.handlers['delete-project'](event, 3);
+
+    // String from the dropdown vs number from the projects list - still the
+    // same project.
+    expect(db.deleteProject).not.toHaveBeenCalled();
+    expect(event.sender.sent[0].channel).toBe('project-delete-error');
+    expect(event.sender.sent[0].payload.reason).toBe('timer-running');
+    expect(activeTimer.isRunning()).toBe(true);
+  });
+
+  test('delete-project still works on other projects while a timer runs', () => {
+    activeTimer.start({ projectId: '3' });
+    db.deleteProject.mockImplementation((id, cb) => cb(null));
+    const event = createMockEvent();
+    ipcMain.handlers['delete-project'](event, 4);
+
+    expect(db.deleteProject).toHaveBeenCalledWith(4, expect.any(Function));
+    expect(event.sender.sent.find(m => m.channel === 'project-deleted')).toBeTruthy();
   });
 
   // --- get-projects ---
@@ -183,35 +211,138 @@ describe('IPC Handlers', () => {
     expect(event.sender.sent.length).toBe(0);
   });
 
-  // --- save-timer ---
-  test('save-timer billable project calculates amount earned', () => {
-    db.getProjectById.mockImplementation((id, cb) =>
-      cb(null, { id, is_billable: 1, hourly_rate: 60 }));
+  // --- running timer ---
+  test('get-active-timer replies with null when nothing is running', () => {
     const event = createMockEvent();
-    ipcMain.handlers['save-timer'](event, {
-      selectedProjectId: 1, startTime: 'st', endTime: 'et', duration: 7200, taskDesc: 'Work'
+    ipcMain.handlers['get-active-timer'](event);
+    expect(event.sender.sent).toEqual([{ channel: 'active-timer', payload: null }]);
+  });
+
+  test('start-timer replies with the running state', () => {
+    const event = createMockEvent();
+    ipcMain.handlers['start-timer'](event, { projectId: 5, taskDesc: 'Work', projectName: 'Acme' });
+
+    expect(event.sender.sent[0].channel).toBe('active-timer');
+    expect(event.sender.sent[0].payload).toMatchObject({
+      projectId: 5, taskDesc: 'Work', projectName: 'Acme'
     });
+    expect(activeTimer.isRunning()).toBe(true);
+  });
+
+  test('start-timer without a project is refused', () => {
+    const event = createMockEvent();
+    ipcMain.handlers['start-timer'](event, { projectId: '' });
+
+    expect(event.sender.sent[0].channel).toBe('timer-start-error');
+    expect(event.sender.sent[0].payload.reason).toBe('no-project');
+    expect(activeTimer.isRunning()).toBe(false);
+  });
+
+  test('start-timer while one is running is refused and does not restart it', () => {
+    activeTimer.start({ projectId: 1, taskDesc: 'First' });
+    const event = createMockEvent();
+    ipcMain.handlers['start-timer'](event, { projectId: 2, taskDesc: 'Second' });
+
+    expect(event.sender.sent[0].channel).toBe('timer-start-error');
+    expect(event.sender.sent[0].payload.reason).toBe('already-running');
+    expect(activeTimer.getState()).toMatchObject({ projectId: 1, taskDesc: 'First' });
+  });
+
+  // The timer page is destroyed by navigation, so a page that comes back and
+  // asks must be told what is still running.
+  test('get-active-timer replies with the live state after a navigation', () => {
+    activeTimer.start({ projectId: 9, taskDesc: 'Long task', projectName: 'Acme' });
+    const event = createMockEvent();
+    ipcMain.handlers['get-active-timer'](event);
+
+    expect(event.sender.sent[0].payload).toMatchObject({ projectId: 9, taskDesc: 'Long task' });
+    expect(typeof event.sender.sent[0].payload.startedAtMs).toBe('number');
+  });
+
+  test('stop-timer clears the state and persists a billable entry', () => {
+    db.getProjectById.mockImplementation((id, cb) => cb(null, { id, is_billable: 1, hourly_rate: 60 }));
+    db.insertTimer.mockImplementation((...args) => args[args.length - 1](null, { id: 11 }));
+
+    const nowSpy = jest.spyOn(Date, 'now');
+    nowSpy.mockReturnValue(1_000_000);
+    activeTimer.start({ projectId: 1, taskDesc: 'Work' });
+    nowSpy.mockReturnValue(1_000_000 + 7_200_000);
+
+    const event = createMockEvent();
+    ipcMain.handlers['stop-timer'](event);
+    nowSpy.mockRestore();
+
     // 7200s / 3600 * 60 = 120.00
-    expect(db.insertTimer).toHaveBeenCalledWith(1, 'st', 'et', 7200, 'Work', 120);
+    expect(db.insertTimer).toHaveBeenCalledWith(
+      1, expect.any(String), expect.any(String), 7200, 'Work', 120, expect.any(Function));
+    expect(activeTimer.isRunning()).toBe(false);
+    expect(event.sender.sent).toEqual([
+      { channel: 'active-timer', payload: null },
+      { channel: 'timer-saved', payload: { duration: 7200 } }
+    ]);
   });
 
-  test('save-timer non-billable project inserts null amount', () => {
-    db.getProjectById.mockImplementation((id, cb) =>
-      cb(null, { id, is_billable: 0, hourly_rate: null }));
-    const event = createMockEvent();
-    ipcMain.handlers['save-timer'](event, {
-      selectedProjectId: 2, startTime: 'st', endTime: 'et', duration: 3600, taskDesc: ''
-    });
-    expect(db.insertTimer).toHaveBeenCalledWith(2, 'st', 'et', 3600, '', null);
+  test('stop-timer inserts a null amount for a non-billable project', () => {
+    db.getProjectById.mockImplementation((id, cb) => cb(null, { id, is_billable: 0, hourly_rate: null }));
+    db.insertTimer.mockImplementation((...args) => args[args.length - 1](null, { id: 12 }));
+
+    activeTimer.start({ projectId: 2, taskDesc: '' });
+    ipcMain.handlers['stop-timer'](createMockEvent());
+
+    expect(db.insertTimer).toHaveBeenCalledWith(
+      2, expect.any(String), expect.any(String), expect.any(Number), '', null, expect.any(Function));
   });
 
-  test('save-timer fallback insert on getProjectById error', () => {
+  test('stop-timer still saves when the project lookup fails', () => {
     db.getProjectById.mockImplementation((id, cb) => cb(new Error('db-err')));
-    const event = createMockEvent();
-    ipcMain.handlers['save-timer'](event, {
-      selectedProjectId: 3, startTime: 'st', endTime: 'et', duration: 1800, taskDesc: 'T'
+    db.insertTimer.mockImplementation((...args) => args[args.length - 1](null, { id: 13 }));
+
+    activeTimer.start({ projectId: 3, taskDesc: 'T' });
+    ipcMain.handlers['stop-timer'](createMockEvent());
+
+    expect(db.insertTimer).toHaveBeenCalledWith(
+      3, expect.any(String), expect.any(String), expect.any(Number), 'T', null, expect.any(Function));
+  });
+
+  test('stop-timer reports a failed insert rather than claiming success', () => {
+    activeTimer.start({ projectId: 2, taskDesc: 'Doomed' });
+    db.getProjectById.mockImplementation((id, cb) => cb(null, { is_billable: 0 }));
+    db.insertTimer.mockImplementation((...args) => {
+      args[args.length - 1](new Error('database is locked'));
     });
-    expect(db.insertTimer).toHaveBeenCalledWith(3, 'st', 'et', 1800, 'T');
+
+    const event = createMockEvent();
+    ipcMain.handlers['stop-timer'](event);
+
+    // The page is already idle and the slot is already empty, so the error is
+    // the only remaining trace of the session - it must not be swallowed.
+    expect(event.sender.sent.map(m => m.channel)).toEqual(['active-timer', 'timer-save-error']);
+    expect(event.sender.sent[1].payload.message).toBe('database is locked');
+    expect(event.sender.sent.find(m => m.channel === 'timer-saved')).toBeUndefined();
+  });
+
+  test('a failed insert still returns the duration the user lost', () => {
+    const startedAt = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(startedAt);
+    activeTimer.start({ projectId: 2 });
+    Date.now.mockReturnValue(startedAt + 90_000);
+
+    db.getProjectById.mockImplementation((id, cb) => cb(null, { is_billable: 0 }));
+    db.insertTimer.mockImplementation((...args) => args[args.length - 1](new Error('nope')));
+
+    const event = createMockEvent();
+    ipcMain.handlers['stop-timer'](event);
+    Date.now.mockRestore();
+
+    expect(event.sender.sent[1].payload.duration).toBe(90);
+  });
+
+  test('stop-timer while idle saves nothing', () => {
+    const event = createMockEvent();
+    ipcMain.handlers['stop-timer'](event);
+
+    expect(db.insertTimer).not.toHaveBeenCalled();
+    expect(event.sender.sent).toEqual([{ channel: 'active-timer', payload: null }]);
   });
 
   // --- delete-timer ---

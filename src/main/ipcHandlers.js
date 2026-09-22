@@ -1,9 +1,7 @@
 const { ipcMain, nativeTheme, dialog } = require('electron');
 const {
-  insertTimer,
   insertProject,
   getProjects,
-  getProjectById,
   deleteProject,
   getTimers,
   countTimers,
@@ -16,6 +14,8 @@ const {
 const { generateCSV, generateFileName } = require('../shared/utils/csvUtils');
 const { roundTo2 } = require('../shared/utils/numberHelper');
 const { formatMonthLabel, lastTwelveMonths, monthWindowStart } = require('../shared/utils/dateHelper');
+const activeTimer = require('./activeTimer');
+const { persistTimer } = require('./timerPersistence');
 const fs = require('fs');
 
 function setupIpcHandlers() {
@@ -49,9 +49,30 @@ function setupIpcHandlers() {
     }
   });
 
+  /**
+   * Deleting a project is refused while that project's timer is running.
+   *
+   * The running timer holds only a project id, and the row it will insert on
+   * stop is written with no foreign-key enforcement - so deleting underneath it
+   * produces a timer pointing at a project that no longer exists, which the
+   * listing renders as a blank name. Stopping first makes the choice explicit.
+   *
+   * Ids are compared as strings: the renderer's dropdown yields text while the
+   * projects list passes the raw database number.
+   */
   ipcMain.on('delete-project', (event, id) => {
+    const running = activeTimer.getState();
+
+    if (running && String(running.projectId) === String(id)) {
+      return event.sender.send('project-delete-error', {
+        reason: 'timer-running',
+        message: 'This project has a timer running. Stop the timer before deleting it.'
+      });
+    }
+
     deleteProject(id, (err) => {
-      if (!err) event.sender.send('project-deleted');
+      if (err) return event.sender.send('project-delete-error', { message: err.message });
+      event.sender.send('project-deleted');
     });
   });
 
@@ -154,28 +175,55 @@ function setupIpcHandlers() {
     });
   });
 
-  ipcMain.on('save-timer', (event, { selectedProjectId, startTime, endTime, duration, taskDesc }) => {
-    // Get project details to calculate amount earned
-    getProjectById(selectedProjectId, (err, project) => {
-      if (err) {
-        console.error('Error getting project for timer calculation:', err);
-        // Fall back to inserting timer without amount calculation
-        insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc);
-        return;
+  /**
+   * Running-timer control. The renderer never owns the clock: it asks main to
+   * start or stop, and renders whatever comes back on 'active-timer'. That is
+   * what lets a page be destroyed by navigation and rebuilt without the timer
+   * being affected.
+   *
+   * Every handler answers on 'active-timer' so each page has exactly one
+   * rendering path, whether it just started a timer or merely asked what is
+   * running.
+   */
+  ipcMain.on('get-active-timer', (event) => {
+    event.sender.send('active-timer', activeTimer.getState());
+  });
+
+  ipcMain.on('start-timer', (event, { projectId, taskDesc, projectName } = {}) => {
+    const result = activeTimer.start({ projectId, taskDesc, projectName });
+
+    if (!result.ok) {
+      const message = result.reason === 'already-running'
+        ? 'A timer is already running.'
+        : 'Select a project before starting the timer.';
+      return event.sender.send('timer-start-error', { reason: result.reason, message });
+    }
+
+    event.sender.send('active-timer', result.state);
+  });
+
+  ipcMain.on('stop-timer', (event) => {
+    const finished = activeTimer.stop();
+
+    // Idle stop - a double click, or a page that rendered a stale state. Reply
+    // anyway so the caller converges on "nothing is running".
+    if (!finished) return event.sender.send('active-timer', null);
+
+    event.sender.send('active-timer', null);
+
+    // The slot is already empty and the page has already repainted as idle, so
+    // a failed insert means the session exists nowhere. Say so instead of
+    // reporting success: the duration goes back with the error, which is the
+    // only remaining copy the user can act on.
+    persistTimer(finished, (insertErr) => {
+      if (insertErr) {
+        return event.sender.send('timer-save-error', {
+          duration: finished.duration,
+          message: insertErr.message
+        });
       }
 
-      let amountEarned = null;
-
-      // Calculate amount earned if project is billable
-      if (project && project.is_billable && project.hourly_rate) {
-        const durationInHours = duration / 3600; // Convert seconds to hours
-        amountEarned = durationInHours * parseFloat(project.hourly_rate);
-        // Round to 2 decimal places
-        amountEarned = Math.round(amountEarned * 100) / 100;
-      }
-
-      // Insert timer with calculated amount
-      insertTimer(selectedProjectId, startTime, endTime, duration, taskDesc, amountEarned);
+      event.sender.send('timer-saved', { duration: finished.duration });
     });
   });
 

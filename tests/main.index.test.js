@@ -1,5 +1,7 @@
 jest.mock('../src/main/ipcHandlers', () => jest.fn());
 
+jest.mock('../src/main/timerPersistence', () => ({ persistTimer: jest.fn() }));
+
 jest.mock('electron', () => {
   const mockWin = {
     loadFile: jest.fn(),
@@ -31,6 +33,8 @@ jest.mock('electron', () => {
 
 const electron = require('electron');
 const setupIpcHandlers = require('../src/main/ipcHandlers');
+const activeTimer = require('../src/main/activeTimer');
+const { persistTimer } = require('../src/main/timerPersistence');
 
 beforeAll(async () => {
   require('../src/main/index');
@@ -209,5 +213,134 @@ describe('main/index: legacy database import', () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
 
     expect(importLegacyDatabase(target)).toBe(false);
+  });
+});
+
+/**
+ * Quitting with a timer running must save it rather than lose it - the same
+ * guarantee the Stop button gives, applied to the Exit menu item, the window
+ * close button and window-all-closed, which all funnel through app.quit().
+ *
+ * The handler's `quitting` flag is deliberately one-shot for the life of the
+ * process, so each test loads a fresh copy of the module rather than trying to
+ * reset it.
+ */
+describe('main/index: auto-save on quit', () => {
+  let app;
+  let timer;
+  let persist;
+  let beforeQuit;
+
+  beforeEach(() => {
+    // resetModules hands the fresh index.js fresh copies of every mocked
+    // module, so the assertions have to look at those, not the ones the rest
+    // of this file captured at load time.
+    jest.resetModules();
+    require('../src/main/index');
+
+    app = require('electron').app;
+    timer = require('../src/main/activeTimer');
+    persist = require('../src/main/timerPersistence').persistTimer;
+    beforeQuit = app._handlers['before-quit'];
+  });
+
+  test('registers a before-quit handler', () => {
+    expect(typeof beforeQuit).toBe('function');
+  });
+
+  test('lets the app quit untouched when no timer is running', () => {
+    const event = { preventDefault: jest.fn() };
+    beforeQuit(event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+  });
+
+  test('defers the quit, saves the running timer, then quits', () => {
+    timer.start({ projectId: 4, taskDesc: 'Unfinished' });
+    const event = { preventDefault: jest.fn() };
+
+    beforeQuit(event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(persist.mock.calls[0][0]).toMatchObject({
+      selectedProjectId: 4,
+      taskDesc: 'Unfinished'
+    });
+    // Still open until the insert reports back.
+    expect(app.quit).not.toHaveBeenCalled();
+
+    persist.mock.calls[0][1](null);
+    expect(app.quit).toHaveBeenCalledTimes(1);
+  });
+
+  test('the re-issued quit does not save a second time', () => {
+    timer.start({ projectId: 4, taskDesc: 'Unfinished' });
+    beforeQuit({ preventDefault: jest.fn() });
+    persist.mock.calls[0][1](null);
+
+    const second = { preventDefault: jest.fn() };
+    beforeQuit(second);
+
+    expect(second.preventDefault).not.toHaveBeenCalled();
+    expect(persist).toHaveBeenCalledTimes(1);
+    expect(app.quit).toHaveBeenCalledTimes(1);
+  });
+
+  test('a failed save still lets the app close', () => {
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    timer.start({ projectId: 5 });
+    beforeQuit({ preventDefault: jest.fn() });
+
+    persist.mock.calls[0][1](new Error('disk full'));
+    expect(app.quit).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * The backstop is the one path that loses a session outright, so it has to
+   * both fire and leave a record of what it discarded.
+   */
+  describe('the save-on-quit backstop', () => {
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    test('an insert that never calls back still closes the app, and says what was lost', () => {
+      // spyOn reuses an existing spy, so drop whatever earlier tests logged.
+      const logged = jest.spyOn(console, 'error').mockImplementation(() => {});
+      logged.mockClear();
+      timer.start({ projectId: 9, taskDesc: 'Hung' });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      // persistTimer is mocked and never calls back - a wedged insert.
+      jest.advanceTimersByTime(4999);
+      expect(app.quit).not.toHaveBeenCalled();
+
+      jest.advanceTimersByTime(1);
+      expect(app.quit).toHaveBeenCalledTimes(1);
+      expect(logged.mock.calls[0][0]).toMatch(/Timed out saving the running timer/);
+      expect(logged.mock.calls[0][0]).toContain('project 9');
+    });
+
+    test('a callback arriving after the backstop does not quit twice', () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
+      timer.start({ projectId: 9 });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      jest.advanceTimersByTime(5000);
+      persist.mock.calls[0][1](null);
+
+      expect(app.quit).toHaveBeenCalledTimes(1);
+    });
+
+    test('a prompt save cancels the backstop', () => {
+      timer.start({ projectId: 9 });
+      beforeQuit({ preventDefault: jest.fn() });
+
+      persist.mock.calls[0][1](null);
+      jest.advanceTimersByTime(10_000);
+
+      expect(app.quit).toHaveBeenCalledTimes(1);
+    });
   });
 });
