@@ -89,4 +89,26 @@ describe('CSV Utilities', () => {
 
     expect(lines[1]).toBe('Próprio,Conciliação — Avançado,15/03/2024,14:30:00,15/03/2024,15:30:00,1:00,,');
   });
+
+  test('escapeCSVField neutralizes spreadsheet formula injection', () => {
+    // Excel evaluates a cell starting with = + - @ tab or CR as a formula.
+    expect(escapeCSVField('=HYPERLINK("http://x","click")'))
+      .toBe('"\'=HYPERLINK(""http://x"",""click"")"');
+    expect(escapeCSVField('+1+1')).toBe("'+1+1");
+    expect(escapeCSVField('@SUM(A1)')).toBe("'@SUM(A1)");
+    expect(escapeCSVField('-Client A')).toBe("'-Client A");
+    expect(escapeCSVField('\tTabbed')).toBe("'\tTabbed");
+  });
+
+  test('escapeCSVField leaves plain negative numbers as data', () => {
+    expect(escapeCSVField('-50.00')).toBe('-50.00');
+    expect(escapeCSVField('-7')).toBe('-7');
+    expect(escapeCSVField(-50.5)).toBe('-50.5');
+  });
+
+  test('escapeCSVField does not disturb ordinary or accented values', () => {
+    expect(escapeCSVField('Próprio')).toBe('Próprio');
+    expect(escapeCSVField('$120.50')).toBe('$120.50');
+    expect(escapeCSVField('15/03/2024')).toBe('15/03/2024');
+  });
 });

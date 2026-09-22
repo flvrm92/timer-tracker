@@ -22,11 +22,13 @@ const timers = [
   }
 ];
 
+let tmpDir;
 let filePath;
 let bytes;
 
 beforeAll(() => {
-  filePath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'csv-encoding-')), 'export.csv');
+  tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'csv-encoding-'));
+  filePath = path.join(tmpDir, 'export.csv');
 
   // Mirrors src/main/ipcHandlers.js exactly.
   fs.writeFileSync(filePath, generateCSV(timers), 'utf8');
@@ -35,7 +37,9 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  fs.rmSync(path.dirname(filePath), { recursive: true, force: true });
+  // Guarded: if beforeAll threw, tmpDir is undefined and an unguarded
+  // rmSync would mask the original failure.
+  if (tmpDir) fs.rmSync(tmpDir, { recursive: true, force: true });
 });
 
 describe('CSV export file encoding', () => {

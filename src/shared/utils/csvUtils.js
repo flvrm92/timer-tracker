@@ -13,9 +13,24 @@ function formatDuration(seconds) {
   return `${hours}:${minutes.toString().padStart(2, '0')}`;
 }
 
+// Spreadsheet apps evaluate a cell whose text begins with one of these as a
+// formula, so a project named =HYPERLINK(...) would execute on open instead of
+// being displayed. A leading apostrophe forces Excel to treat it as literal text.
+const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+const PLAIN_NUMBER = /^-?\d+(\.\d+)?$/;
+
+function isFormulaLike(value) {
+  // A negative number ("-50.00") is data, not a formula.
+  return FORMULA_TRIGGER.test(value) && !PLAIN_NUMBER.test(value);
+}
+
 function escapeCSVField(field) {
   if (field === null || field === undefined) return '';
-  const stringField = String(field);
+  let stringField = String(field);
+
+  if (isFormulaLike(stringField)) {
+    stringField = "'" + stringField;
+  }
 
   // If field contains comma, quote, or newline, wrap in quotes and escape internal quotes
   if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n') || stringField.includes('\r')) {
