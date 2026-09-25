@@ -16,6 +16,7 @@ jest.mock('electron', () => {
   const appHandlers = {};
   const app = {
     getPath: jest.fn(() => '/mock/userData'),
+    getVersion: jest.fn(() => '9.9.9'),
     isPackaged: false,
     quit: jest.fn(),
     whenReady: jest.fn(() => Promise.resolve()),
@@ -107,16 +108,28 @@ describe('main/index: BrowserWindow creation', () => {
 });
 
 describe('main/index: menu wiring', () => {
-  test('builds menu with Projects, Timers, Window, View, Exit labels', () => {
+  test('builds menu with Projects, Timers, Window, View, Help, Exit labels', () => {
     expect(electron.Menu.buildFromTemplate).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ label: 'Projects' }),
         expect.objectContaining({ label: 'Timers' }),
         expect.objectContaining({ label: 'Window' }),
         expect.objectContaining({ label: 'View' }),
+        expect.objectContaining({ label: 'Help' }),
         expect.objectContaining({ label: 'Exit' }),
       ])
     );
+  });
+
+  /**
+   * menuTemplate.test.js owns the template's shape; this only checks that the
+   * entry point wired the real resolver in rather than a stub, which is the
+   * one thing a pure template test cannot see.
+   */
+  test('the Help item reads its version from the live app metadata', () => {
+    const [template] = electron.Menu.buildFromTemplate.mock.calls[0];
+    const help = template.find((item) => item.label === 'Help');
+    expect(help.submenu[0].label).toContain('9.9.9');
   });
 
   test('calls Menu.setApplicationMenu', () => {

@@ -3,6 +3,10 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path')
 
+const appVersion = require('./appVersion');
+const { buildMenuTemplate } = require('./menuTemplate');
+const { createAboutWindowManager } = require('./aboutWindow');
+
 /**
  * Copies a pre-MSIX database into the app's userData directory on first run.
  *
@@ -57,108 +61,20 @@ const createWindow = () => {
 
   win.loadFile('src/renderer/timer/timer.html')
 
-  const menu = Menu.buildFromTemplate([
-    {
-      label: 'Projects',
-      submenu: [{
-        label: 'Create and List',
-        click: () => win.loadFile('src/renderer/projects/projects.html')
-      }]
-    },
-    {
-      label: 'Timers',
-      submenu: [{
-        label: 'List and Edit',
-        click: () => win.loadFile('src/renderer/timers/timers.html')
-      }]
-    },
-    {
-      label: 'Dashboard',
-      submenu: [{
-        label: 'Overview',
-        click: () => win.loadFile('src/renderer/dashboard/dashboard.html')
-      }]
-    },
-    {
-      label: 'Window',
-      submenu: [
-        {
-          label: 'Timer',
-          click: () => win.loadFile('src/renderer/timer/timer.html')
-        }
-      ]
-    },
-    {
-      label: 'View',
-      submenu: [
-        {
-          label: 'Theme',
-          submenu: [
-            {
-              label: 'Light',
-              type: 'radio',
-              click: async () => {
-                await win.webContents.executeJavaScript(`
-                  if (window.darkMode) {
-                    window.darkMode.setTheme('light');
-                  }
-                  if (window.ThemeUtils) {
-                    window.ThemeUtils.setTheme('light');
-                  }
-                `);
-              }
-            },
-            {
-              label: 'Dark',
-              type: 'radio',
-              click: async () => {
-                await win.webContents.executeJavaScript(`
-                  if (window.darkMode) {
-                    window.darkMode.setTheme('dark');
-                  }
-                  if (window.ThemeUtils) {
-                    window.ThemeUtils.setTheme('dark');
-                  }
-                `);
-              }
-            },
-            {
-              label: 'System',
-              type: 'radio',
-              checked: true,
-              click: async () => {
-                await win.webContents.executeJavaScript(`
-                  if (window.darkMode) {
-                    window.darkMode.system();
-                  }
-                  if (window.ThemeUtils) {
-                    window.ThemeUtils.setTheme('system');
-                  }
-                `);
-              }
-            }
-          ]
-        },
-        // DevTools is a development affordance only. Spreading keeps the rest
-        // of the View menu - and the Projects/Timers navigation - intact in
-        // packaged builds, which is the only way to move between pages.
-        ...(app.isPackaged ? [] : [
-          { type: 'separator' },
-          {
-            label: 'Toggle DevTools',
-            accelerator: 'Ctrl+Shift+I',
-            click: () => {
-              win.webContents.toggleDevTools()
-            }
-          }
-        ])
-      ]
-    },
-    {
-      label: 'Exit',
-      click: () => { app.quit() },
-    },
-  ]);
+  const about = createAboutWindowManager({
+    BrowserWindow,
+    parent: win,
+    isPackaged: app.isPackaged,
+    getAboutInfo: () => appVersion.buildAboutInfo(),
+  });
+
+  // The template is data; building and installing it is this module's job.
+  const menu = Menu.buildFromTemplate(buildMenuTemplate({
+    win,
+    isPackaged: app.isPackaged,
+    openAbout: () => about.open(),
+    quit: () => app.quit(),
+  }));
 
   Menu.setApplicationMenu(menu);
 }

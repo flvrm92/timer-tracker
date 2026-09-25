@@ -5,6 +5,7 @@
  * Outputs:
  *   packaging/assets/*.png  - referenced by packaging/Package.appxmanifest.template
  *   packaging/icon.ico      - referenced by packagerConfig.icon in forge.config.js
+ *   src/renderer/about/appIcon.png - shown in the About popup
  *
  * Run via `npm run generate-icons`. Also runs automatically before packaging,
  * so the committed art can never drift from the source SVG.
@@ -18,6 +19,12 @@ const ROOT = path.join(__dirname, '..');
 const SOURCE = path.join(ROOT, 'packaging', 'icon.svg');
 const ASSETS = path.join(ROOT, 'packaging', 'assets');
 const ICO = path.join(ROOT, 'packaging', 'icon.ico');
+
+// The About popup renders this at 96 CSS px; 192 keeps it crisp on hi-DPI.
+// packaging/ is excluded from the packaged ASAR, so the popup's copy has to
+// live under src/ - it is generated here and committed like the tile art.
+const ABOUT_ICON = path.join(ROOT, 'src', 'renderer', 'about', 'appIcon.png');
+const ABOUT_ICON_SIZE = 192;
 
 // Square tiles and logos. Names are dictated by the manifest references.
 const SQUARE = {
@@ -88,11 +95,15 @@ async function main() {
   // Splash screen shown while the Electron main process boots.
   write('SplashScreen.png', await canvas(620, 300, 256));
 
+  fs.mkdirSync(path.dirname(ABOUT_ICON), { recursive: true });
+  fs.writeFileSync(ABOUT_ICON, await square(ABOUT_ICON_SIZE));
+
   fs.writeFileSync(ICO, await pngToIco(await Promise.all(ICO_SIZES.map(square))));
 
   console.log(`Wrote ${written.length} assets to packaging/assets:`);
   for (const name of written.sort()) console.log(`  ${name}`);
   console.log(`Wrote packaging/icon.ico (${ICO_SIZES.join(', ')} px)`);
+  console.log(`Wrote src/renderer/about/appIcon.png (${ABOUT_ICON_SIZE} px)`);
 }
 
 main().catch((err) => {

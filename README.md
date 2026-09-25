@@ -11,6 +11,7 @@ A simple and efficient desktop time tracking application built with Electron and
 - **🔍 Advanced Filtering**: Filter timers by project and date range
 - **📤 CSV Export**: Export filtered timer data to CSV files
 - **🌙 Theme Support**: Light, dark, and system theme options
+- **ℹ️ Version Info**: Help → About shows the installed version and runtime details, with a Copy button for bug reports
 - **✅ Automated Tests**: Jest test suite — 86 tests across 5 suites; ~82% statement coverage (preload and IPC handlers near full; dateHelper and main index partially covered)
 - **💲 Billable Projects**: Mark projects as billable with an hourly rate; timers automatically calculate amount earned
 - **🗃️ Database Migrations**: Automatic schema migration & version tracking (schema_version table)
@@ -81,6 +82,14 @@ A simple and efficient desktop time tracking application built with Electron and
 - Filter by project or date range
 - Export filtered data using the "Export CSV" button
 
+### Checking your version
+The Help menu shows the installed version in its own label - `About Timer Tracker (v1.0.5)` - so you can read it
+without opening anything. Clicking it opens a small About popup with the app version and the Electron, Node and
+Chromium versions, plus a **Copy** button that puts a one-line summary on the clipboard to paste into a bug report.
+
+The version comes from `package.json`, which is the single place a release is bumped: the same field feeds the MSIX
+manifest version, the package filename, the menu label and the popup.
+
 ### Themes
 Change themes via the View menu:
 - Light mode
@@ -136,7 +145,8 @@ src/
 ├── renderer/            # Renderer processes (UI)
 │   ├── timer/          # Main timer interface
 │   ├── projects/       # Project management
-│   └── timers/         # Timer history and editing
+│   ├── timers/         # Timer history and editing
+│   └── about/          # About popup (Help menu)
 ├── infra/              # Infrastructure
 │   └── database.js     # SQLite database operations
 ├── shared/             # Shared utilities and styles
