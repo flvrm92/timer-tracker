@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'none';" />
+  <title>About Timer Tracker</title>
+  <link rel="stylesheet" type="text/css" href="../../shared/styles/app.css" />
+</head>
+
+<body>
+  <div class="about" role="dialog" aria-modal="true" aria-labelledby="about-name">
+    <img class="about-icon" src="appIcon.png" alt="" width="96" height="96" />
+    <h1 class="about-name" id="about-name">Timer Tracker</h1>
+    <!-- Version is content, not decoration: a screen reader reads the whole
+         line, and the styling only makes it the visual focus as well. -->
+    <p class="about-version" id="about-version">Version unknown</p>
+    <p class="about-runtime" id="about-runtime"></p>
+    <p class="about-status" id="about-status" role="status" aria-live="polite"></p>
+    <div class="about-actions">
+      <button type="button" id="about-copy" class="btn btn-secondary">Copy</button>
+      <button type="button" id="about-close" class="btn btn-primary">Close</button>
+    </div>
+  </div>
+
+  <script src="../../shared/utils/theme.js"></script>
+  <script src="about.js"></script>
+</body>
+
+</html>

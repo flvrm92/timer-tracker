@@ -733,3 +733,54 @@
     max-width: none;
   }
 }
+
+/* About Popup
+   Its own child window, so it owns the whole viewport rather than sitting in
+   a page's .container. app.css already centres the body's single child. */
+.about {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  text-align: center;
+}
+
+.about-icon {
+  width: 6rem;
+  height: 6rem;
+  margin-bottom: var(--space-2);
+}
+
+.about-name {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+}
+
+.about-version {
+  margin: 0;
+  font-size: var(--font-size-2xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-primary);
+}
+
+.about-runtime {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.about-status {
+  /* Reserve the line so a Copy confirmation does not shift the buttons. */
+  min-height: var(--space-5);
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-success-text);
+}
+
+.about-actions {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
